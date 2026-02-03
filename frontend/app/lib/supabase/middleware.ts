@@ -21,7 +21,5 @@ export async function createMiddlewareClient(req: NextRequest) {
     }
   );
 
-  await supabase.auth.getUser();
-
-  return res;
+  return { supabase, res }
 }

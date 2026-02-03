@@ -8,10 +8,10 @@ export type AuthState =
     | { ok: false; error: string };
 
 export async function signUpAction(prevState: AuthState, formData: FormData): Promise<AuthState> {
-    const firstName = String(formData.get("firstName") ?? "").trim();
-    const lastName = String(formData.get("lastName") ?? "").trim();
+    const firstName = String(formData.get("first_name") ?? "").trim();
+    const lastName = String(formData.get("last_name") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim();
-    const password = String(formData.get("password") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
     
     const supabase = await createClient();
     const { error } = await supabase.auth.signUp({ 
@@ -26,10 +26,12 @@ export async function signUpAction(prevState: AuthState, formData: FormData): Pr
     });
     
     if (error) {
-        throw new Error(error.message);
+        return { ok: false, error: error.message };
     }
     
-    redirect("/home");
+    console.log(Object.fromEntries(formData.entries()));
+
+    redirect("/dashboard");
 }
 
 export async function signInAction(prevState: AuthState, formData: FormData): Promise<AuthState> {
@@ -40,10 +42,10 @@ export async function signInAction(prevState: AuthState, formData: FormData): Pr
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     
     if (error) {
-        throw new Error(error.message);
+        return { ok: false, error: error.message };
     }
     
-    redirect("/home");
+    redirect("/dashboard");
 }
 
 export async function logoutAction() {
