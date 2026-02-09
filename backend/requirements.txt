@@ -1,2 +1,10 @@
 flask
 python-dotenv
+flask-cors
+google-generativeai
+supabase
+pymupdf
+# spacy
+# sentence-transformers
+redis
+gunicorn
