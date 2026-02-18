@@ -11,6 +11,8 @@ def create_app(config_class=Config):
 
     # Register blueprints
     from app.routes.main import main_bp
+    from app.routes.resume_parser import resume_parser_bp
     app.register_blueprint(main_bp)
+    app.register_blueprint(resume_parser_bp, url_prefix='/api/resume_parser')
 
     return app
