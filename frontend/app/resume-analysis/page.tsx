@@ -111,7 +111,7 @@ export default function ResumeAnalysis() {
             const formData = new FormData();
             formData.append("file", file);
 
-            const uploadRes = await fetch("http://localhost:5000/api/resume_parser/upload", {
+            const uploadRes = await fetch("http://127.0.0.1:5000/api/resume_parser/upload", {
                 method: "POST",
                 body: formData,
             });
@@ -124,7 +124,7 @@ export default function ResumeAnalysis() {
             const resumeText = uploadData.text || uploadData.raw_text || JSON.stringify(uploadData);
 
             // Step 2: Run ATS analysis
-            const atsRes = await fetch("http://localhost:5000/api/ats/optimize", {
+            const atsRes = await fetch("http://127.0.0.1:5000/api/ats/optimize", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

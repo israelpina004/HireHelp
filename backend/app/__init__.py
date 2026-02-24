@@ -7,7 +7,8 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
 
     # Initialize extensions
-    CORS(app)
+    # <-- allow all origins for /api/* endpoints
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
 
     # Register blueprints
     from app.routes.main import main_bp
