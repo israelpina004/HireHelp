@@ -27,26 +27,12 @@ const routeMap: Record<string, string> = {
     "Settings": "/settings", "Help & Support": "/help",
 };
 
-const defaultJD = `Senior Software Engineer – Tech Innovation Team\n\nWe are seeking a talented Senior Software Engineer to join our growing team.\n\nRequired Skills:\n• 5+ years of experience with React and JavaScript\n• Strong experience with TypeScript and modern web frameworks\n• Proficiency in Node.js and REST API development\n• Experience with cloud platforms (AWS preferred)\n• Knowledge of containerization (Docker, Kubernetes)\n• Familiarity with CI/CD pipelines and DevOps practices\n• Experience with databases (PostgreSQL, MongoDB, Redis)\n• Understanding of microservices architecture\n• Strong knowledge of GraphQL\n\nResponsibilities:\n• Lead development of scalable web applications\n• Mentor junior developers and conduct code reviews\n• Collaborate with cross-functional teams using Agile methodology`;
-
-const mockResults = {
-    overallScore: 88, passedATS: true,
-    categories: [
-        { name: "Keyword Match", score: 91, description: "Strong alignment with required skills keywords" },
-        { name: "Format Compatibility", score: 95, description: "Resume format is fully ATS-readable" },
-        { name: "Section Structure", score: 88, description: "All standard sections detected correctly" },
-        { name: "Skills Alignment", score: 82, description: "Most required skills present, a few gaps" },
-        { name: "Experience Match", score: 85, description: "Experience level matches job requirements" },
-    ],
-    passed: ["React", "TypeScript", "Node.js", "REST API", "PostgreSQL", "AWS", "JavaScript", "Git"],
-    failed: ["GraphQL", "Kubernetes", "CI/CD", "microservices", "Agile"],
-    suggestions: [
-        "Add 'GraphQL' to your skills section or project descriptions",
-        "Mention any experience with CI/CD tools like GitHub Actions or Jenkins",
-        "Include 'Agile' or 'Scrum' methodology in your experience bullets",
-        "Add Kubernetes to your cloud/DevOps skills if applicable",
-        "Consider adding a 'microservices' reference in your architecture experience",
-    ],
+type ATSResult = {
+    ats_score: number;
+    semantic_score: number;
+    keyword_match_score: number;
+    matching_keywords: string[];
+    missing_keywords: string[];
 };
 
 function Sidebar({ currentPage }: { currentPage: string }) {
@@ -78,7 +64,7 @@ function Sidebar({ currentPage }: { currentPage: string }) {
 
 function ScoreRing({ score, size = 120 }: { score: number; size?: number }) {
     const r = (size - 14) / 2; const circ = 2 * Math.PI * r; const fill = (score / 100) * circ;
-    const color = score >= 80 ? "#16a34a" : score >= 60 ? "#ca8a04" : "#dc2626";
+    const color = score >= 75 ? "#16a34a" : score >= 50 ? "#ca8a04" : "#dc2626";
     return (
         <div style={{ position: "relative", width: size, height: size }}>
             <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
@@ -96,13 +82,52 @@ type View = "input" | "results";
 
 export default function ATSSimulation() {
     const [view, setView] = useState<View>("input");
-    const [jd, setJd] = useState(defaultJD);
-    const [fileName, setFileName] = useState<string | null>(null);
+    const [jd, setJd] = useState("");
+    const [file, setFile] = useState<File | null>(null);
     const [running, setRunning] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [results, setResults] = useState<ATSResult | null>(null);
     const [expandedSuggestions, setExpandedSuggestions] = useState(false);
 
-    function handleRun() { setRunning(true); setTimeout(() => { setRunning(false); setView("results"); }, 2200); }
-    const canRun = fileName && jd.trim().length > 20;
+    const canRun = file && jd.trim().length > 20;
+
+    async function handleRun() {
+        if (!file || !jd.trim()) return;
+        setRunning(true);
+        setError(null);
+
+        try {
+            // Step 1: Upload and parse the PDF
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const uploadRes = await fetch("http://localhost:5000/api/resume_parser/upload", {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!uploadRes.ok) throw new Error("Failed to parse resume. Is the Flask backend running?");
+            const uploadData = await uploadRes.json();
+            const resumeText = uploadData.text || uploadData.raw_text || JSON.stringify(uploadData);
+
+            // Step 2: Run ATS simulation
+            const atsRes = await fetch("http://localhost:5000/api/ats/optimize", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ resume_text: resumeText, job_description: jd }),
+            });
+
+            if (!atsRes.ok) throw new Error("Failed to run ATS simulation.");
+            const atsData: ATSResult = await atsRes.json();
+
+            setResults(atsData);
+            setView("results");
+        } catch (err: any) {
+            setError(err.message || "Something went wrong.");
+        } finally {
+            setRunning(false);
+        }
+    }
 
     return (
         <div style={{ display: "flex", minHeight: "100vh", background: "#fafafa", fontFamily: "'DM Sans', system-ui, sans-serif" }}>
@@ -113,30 +138,42 @@ export default function ATSSimulation() {
                     <h1 style={{ fontSize: 26, fontWeight: 700, color: "#0a0a0a", letterSpacing: "-0.03em", fontFamily: "'DM Serif Display', Georgia, serif" }}>ATS Simulation</h1>
                     <p style={{ fontSize: 14, color: "#888", marginTop: 5 }}>Test how well your resume performs with Applicant Tracking Systems</p>
                 </div>
+
+                {/* Error banner */}
+                {error && (
+                    <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "12px 16px", marginBottom: 20, fontSize: 13.5, color: "#dc2626" }}>
+                        ⚠️ {error}
+                    </div>
+                )}
+
+                {/* INPUT VIEW */}
                 {view === "input" && (
                     <div style={{ animation: "fadeIn 0.3s ease" }}>
                         <div style={{ display: "flex", gap: 20 }}>
+                            {/* Resume */}
                             <div style={{ flex: 1, background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, padding: 24 }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}><ATSIcon /><h2 style={{ fontSize: 15, fontWeight: 600, color: "#0a0a0a" }}>Your Resume</h2></div>
-                                <label style={{ fontSize: 12.5, color: "#888", fontWeight: 500, display: "block", marginBottom: 6 }}>Choose from your resume bank:</label>
-                                <select style={{ width: "100%", padding: "10px 12px", border: "1px solid #e8e8e8", borderRadius: 8, fontSize: 13.5, color: "#555", background: "#fff", fontFamily: "'DM Sans', system-ui, sans-serif", outline: "none", marginBottom: 16 }}>
-                                    <option value="">Select a saved resume...</option>
-                                    <option>Software Engineer — Google (92%)</option>
-                                    <option>Frontend Developer — Meta (88%)</option>
-                                    <option>Full Stack Developer — StartupXYZ (85%)</option>
-                                </select>
-                                <div style={{ textAlign: "center", color: "#ccc", fontSize: 12, fontWeight: 500, margin: "16px 0" }}>— OR —</div>
-                                <label style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: "2px dashed #e0e0e0", borderRadius: 10, padding: "32px 24px", cursor: "pointer", background: fileName ? "#fafafa" : "#fff" }} onMouseEnter={e => (e.currentTarget.style.borderColor = "#aaa")} onMouseLeave={e => (e.currentTarget.style.borderColor = "#e0e0e0")}>
-                                    <input type="file" accept=".pdf" onChange={e => { if (e.target.files?.[0]) setFileName(e.target.files[0].name); }} style={{ display: "none" }} />
-                                    <div style={{ color: fileName ? "#16a34a" : "#ccc", marginBottom: 10 }}><UploadIcon /></div>
-                                    {fileName ? (<><span style={{ fontSize: 13.5, fontWeight: 600, color: "#0a0a0a", marginBottom: 2 }}>{fileName}</span><span style={{ fontSize: 12, color: "#aaa" }}>Click to replace</span></>) : (<><span style={{ fontSize: 13.5, fontWeight: 500, color: "#555", marginBottom: 4 }}>Upload Resume File</span><span style={{ fontSize: 12, color: "#aaa" }}>PDF only</span></>)}
+                                <label style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: "2px dashed #e0e0e0", borderRadius: 10, padding: "32px 24px", cursor: "pointer", background: file ? "#fafafa" : "#fff" }}
+                                       onMouseEnter={e => (e.currentTarget.style.borderColor = "#aaa")}
+                                       onMouseLeave={e => (e.currentTarget.style.borderColor = "#e0e0e0")}
+                                >
+                                    <input type="file" accept=".pdf" onChange={e => { if (e.target.files?.[0]) setFile(e.target.files[0]); }} style={{ display: "none" }} />
+                                    <div style={{ color: file ? "#16a34a" : "#ccc", marginBottom: 10 }}><UploadIcon /></div>
+                                    {file ? (
+                                        <><span style={{ fontSize: 13.5, fontWeight: 600, color: "#0a0a0a", marginBottom: 2 }}>{file.name}</span><span style={{ fontSize: 12, color: "#aaa" }}>Click to replace</span></>
+                                    ) : (
+                                        <><span style={{ fontSize: 13.5, fontWeight: 500, color: "#555", marginBottom: 4 }}>Upload Resume File</span><span style={{ fontSize: 12, color: "#aaa" }}>PDF only</span></>
+                                    )}
                                 </label>
                             </div>
+
+                            {/* JD */}
                             <div style={{ flex: 1, background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, padding: 24 }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}><TrackingIcon /><h2 style={{ fontSize: 15, fontWeight: 600, color: "#0a0a0a" }}>Job Description</h2></div>
                                 <textarea value={jd} onChange={e => setJd(e.target.value)} placeholder="Paste the job description here..." style={{ width: "100%", height: 340, padding: 14, border: "1px solid #e8e8e8", borderRadius: 8, fontSize: 12.5, color: "#333", lineHeight: 1.6, fontFamily: "'DM Sans', system-ui, sans-serif", background: "#fafafa" }} />
                             </div>
                         </div>
+
                         <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
                             <button onClick={handleRun} disabled={!canRun || running} style={{ padding: "12px 32px", background: canRun ? "#0a0a0a" : "#d0d0d0", color: "#fff", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 600, cursor: canRun ? "pointer" : "not-allowed", display: "flex", alignItems: "center", gap: 8 }}>
                                 {running ? (<><span style={{ width: 14, height: 14, border: "2px solid #ffffff44", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }}/>Running Simulation...</>) : "Run ATS Simulation →"}
@@ -144,60 +181,93 @@ export default function ATSSimulation() {
                         </div>
                     </div>
                 )}
-                {view === "results" && (
+
+                {/* RESULTS VIEW */}
+                {view === "results" && results && (
                     <div style={{ animation: "fadeIn 0.3s ease" }}>
+                        {/* Score hero */}
                         <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, padding: "28px 32px", marginBottom: 20, display: "flex", alignItems: "center", gap: 40 }}>
-                            <ScoreRing score={mockResults.overallScore} />
+                            <ScoreRing score={Math.round(results.ats_score)} />
                             <div>
                                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                                    <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0a0a0a", letterSpacing: "-0.02em" }}>ATS Score: {mockResults.overallScore}%</h2>
-                                    <span style={{ fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" }}>✓ Likely to Pass ATS</span>
+                                    <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0a0a0a", letterSpacing: "-0.02em" }}>ATS Score: {Math.round(results.ats_score)}%</h2>
+                                    <span style={{ fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: results.ats_score >= 75 ? "#f0fdf4" : "#fef2f2", color: results.ats_score >= 75 ? "#16a34a" : "#dc2626", border: `1px solid ${results.ats_score >= 75 ? "#bbf7d0" : "#fecaca"}` }}>
+                    {results.ats_score >= 75 ? "✓ Likely to Pass ATS" : "✗ May Be Filtered"}
+                  </span>
                                 </div>
-                                <p style={{ fontSize: 13.5, color: "#666", maxWidth: 480, lineHeight: 1.6 }}>Your resume scores well overall. Focus on adding missing keywords to push above 90%.</p>
+                                <p style={{ fontSize: 13.5, color: "#666", maxWidth: 480, lineHeight: 1.6 }}>
+                                    {results.ats_score >= 75
+                                        ? "Your resume scores well. Adding the missing keywords below could push you even higher."
+                                        : "Your resume needs improvement. Focus on adding the missing keywords from the job description."}
+                                </p>
                             </div>
-                            <button onClick={() => setView("input")} style={{ marginLeft: "auto", padding: "10px 20px", background: "#fff", border: "1px solid #d0d0d0", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#555", whiteSpace: "nowrap" }}>← Run Again</button>
+                            <button onClick={() => { setView("input"); setResults(null); setError(null); }} style={{ marginLeft: "auto", padding: "10px 20px", background: "#fff", border: "1px solid #d0d0d0", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#555", whiteSpace: "nowrap" }}>← Run Again</button>
                         </div>
+
+                        {/* Score breakdown */}
                         <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, padding: 24, marginBottom: 20 }}>
                             <h3 style={{ fontSize: 15, fontWeight: 600, color: "#0a0a0a", marginBottom: 18 }}>Score Breakdown</h3>
-                            {mockResults.categories.map((cat, i) => (
-                                <div key={i} style={{ marginBottom: 16 }}>
+                            {[
+                                { name: "Overall ATS Score", score: Math.round(results.ats_score), description: "Weighted combination of keyword and semantic scores" },
+                                { name: "Semantic Similarity", score: Math.round(results.semantic_score), description: "How closely your resume matches the job description in meaning" },
+                                { name: "Keyword Match", score: Math.round(results.keyword_match_score), description: "Percentage of job keywords found in your resume" },
+                            ].map((cat, i) => (
+                                <div key={i} style={{ marginBottom: i < 2 ? 16 : 0 }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                                         <div><span style={{ fontSize: 13.5, fontWeight: 600, color: "#0a0a0a" }}>{cat.name}</span><span style={{ fontSize: 12, color: "#aaa", marginLeft: 10 }}>{cat.description}</span></div>
                                         <span style={{ fontSize: 13, fontWeight: 700, color: "#0a0a0a" }}>{cat.score}%</span>
                                     </div>
-                                    <div style={{ height: 6, background: "#f0f0f0", borderRadius: 3, overflow: "hidden" }}><div style={{ width: `${cat.score}%`, height: "100%", borderRadius: 3, background: cat.score >= 85 ? "#0a0a0a" : "#555" }}/></div>
+                                    <div style={{ height: 6, background: "#f0f0f0", borderRadius: 3, overflow: "hidden" }}>
+                                        <div style={{ width: `${cat.score}%`, height: "100%", borderRadius: 3, background: cat.score >= 75 ? "#0a0a0a" : cat.score >= 50 ? "#888" : "#dc2626" }} />
+                                    </div>
                                 </div>
                             ))}
                         </div>
+
+                        {/* Keywords */}
                         <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, padding: 24, marginBottom: 20, display: "flex", gap: 32 }}>
                             <div style={{ flex: 1 }}>
-                                <h3 style={{ fontSize: 13.5, fontWeight: 600, color: "#0a0a0a", marginBottom: 12 }}>✓ Keywords Detected</h3>
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{mockResults.passed.map(k => (<span key={k} style={{ padding: "4px 10px", background: "#f0fdf4", color: "#16a34a", borderRadius: 20, fontSize: 12, fontWeight: 500, border: "1px solid #bbf7d0" }}>{k}</span>))}</div>
-                            </div>
-                            <div style={{ width: 1, background: "#f0f0f0" }}/>
-                            <div style={{ flex: 1 }}>
-                                <h3 style={{ fontSize: 13.5, fontWeight: 600, color: "#0a0a0a", marginBottom: 12 }}>✗ Missing Keywords</h3>
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{mockResults.failed.map(k => (<span key={k} style={{ padding: "4px 10px", background: "#fef2f2", color: "#dc2626", borderRadius: 20, fontSize: 12, fontWeight: 500, border: "1px solid #fecaca" }}>{k}</span>))}</div>
-                            </div>
-                        </div>
-                        <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, overflow: "hidden" }}>
-                            <button onClick={() => setExpandedSuggestions(!expandedSuggestions)} style={{ width: "100%", padding: "18px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}>
-                                <h3 style={{ fontSize: 15, fontWeight: 600, color: "#0a0a0a" }}>💡 Improvement Suggestions ({mockResults.suggestions.length})</h3>
-                                <span style={{ color: "#aaa", transform: expandedSuggestions ? "rotate(90deg)" : "none", transition: "transform 0.2s" }}><ChevronIcon /></span>
-                            </button>
-                            {expandedSuggestions && (
-                                <div style={{ padding: "0 24px 24px", borderTop: "1px solid #f0f0f0" }}>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
-                                        {mockResults.suggestions.map((s, i) => (
-                                            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", background: "#fafafa", borderRadius: 8 }}>
-                                                <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#0a0a0a", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</span>
-                                                <span style={{ fontSize: 13, color: "#555", lineHeight: 1.5 }}>{s}</span>
-                                            </div>
-                                        ))}
-                                    </div>
+                                <h3 style={{ fontSize: 13.5, fontWeight: 600, color: "#0a0a0a", marginBottom: 12 }}>✓ Keywords Detected ({results.matching_keywords.length})</h3>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                    {results.matching_keywords.length > 0
+                                        ? results.matching_keywords.map(k => (<span key={k} style={{ padding: "4px 10px", background: "#f0fdf4", color: "#16a34a", borderRadius: 20, fontSize: 12, fontWeight: 500, border: "1px solid #bbf7d0" }}>{k}</span>))
+                                        : <span style={{ fontSize: 13, color: "#aaa" }}>No matching keywords found</span>
+                                    }
                                 </div>
-                            )}
+                            </div>
+                            <div style={{ width: 1, background: "#f0f0f0" }} />
+                            <div style={{ flex: 1 }}>
+                                <h3 style={{ fontSize: 13.5, fontWeight: 600, color: "#0a0a0a", marginBottom: 12 }}>✗ Missing Keywords ({results.missing_keywords.length})</h3>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                    {results.missing_keywords.length > 0
+                                        ? results.missing_keywords.map(k => (<span key={k} style={{ padding: "4px 10px", background: "#fef2f2", color: "#dc2626", borderRadius: 20, fontSize: 12, fontWeight: 500, border: "1px solid #fecaca" }}>{k}</span>))
+                                        : <span style={{ fontSize: 13, color: "#aaa" }}>No missing keywords — great job!</span>
+                                    }
+                                </div>
+                            </div>
                         </div>
+
+                        {/* Suggestions */}
+                        {results.missing_keywords.length > 0 && (
+                            <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, overflow: "hidden" }}>
+                                <button onClick={() => setExpandedSuggestions(!expandedSuggestions)} style={{ width: "100%", padding: "18px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}>
+                                    <h3 style={{ fontSize: 15, fontWeight: 600, color: "#0a0a0a" }}>💡 Improvement Suggestions</h3>
+                                    <span style={{ color: "#aaa", transform: expandedSuggestions ? "rotate(90deg)" : "none", transition: "transform 0.2s" }}><ChevronIcon /></span>
+                                </button>
+                                {expandedSuggestions && (
+                                    <div style={{ padding: "0 24px 24px", borderTop: "1px solid #f0f0f0" }}>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
+                                            {results.missing_keywords.map((kw, i) => (
+                                                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", background: "#fafafa", borderRadius: 8 }}>
+                                                    <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#0a0a0a", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</span>
+                                                    <span style={{ fontSize: 13, color: "#555", lineHeight: 1.5 }}>Add <strong>"{kw}"</strong> to your resume — this keyword appears in the job description but is missing from your resume.</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
             </main>
