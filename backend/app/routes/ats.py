@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.services.ats_optimizer import calculate_ats_score, extract_keywords
+from app.services.ats_optimizer import calculate_ats_score
 from app.services.bias_detector import detect_bias
 
 ats_bp = Blueprint('ats', __name__)
@@ -19,19 +19,6 @@ def optimize_resume():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@ats_bp.route('/keywords', methods=['POST'])
-def get_keywords():
-    data = request.get_json()
-    text = data.get('text')
-    
-    if not text:
-        return jsonify({"error": "Missing text"}), 400
-        
-    try:
-        keywords = extract_keywords(text)
-        return jsonify({"keywords": keywords})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 @ats_bp.route('/bias-check', methods=['POST'])
 def check_bias():
