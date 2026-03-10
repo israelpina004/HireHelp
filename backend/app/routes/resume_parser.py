@@ -19,4 +19,5 @@ def upload_resume():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
-    return jsonify(parsed_data)
+    # Include raw_text so the frontend can pass it directly to the ATS optimizer
+    return jsonify({**parsed_data, "raw_text": text})
