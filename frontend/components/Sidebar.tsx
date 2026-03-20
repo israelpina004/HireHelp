@@ -11,7 +11,6 @@ export const sidebarItems = [
     { label: "Dashboard", icon: DashboardIcon },
     { label: "Resume Analysis", icon: ResumeAnalysisIcon },
     { label: "Resume Bank", icon: ResumeBankIcon },
-    { label: "ATS Simulation", icon: ATSIcon },
     { label: "Interview Prep", icon: InterviewIcon },
     { label: "Application Tracking", icon: TrackingIcon },
 ];
@@ -25,7 +24,6 @@ export const routeMap: Record<string, string> = {
     "Dashboard": "/dashboard",
     "Resume Analysis": "/resume-analysis",
     "Resume Bank": "/resume-bank",
-    "ATS Simulation": "/ats-simulation",
     "Interview Prep": "/interview-prep",
     "Application Tracking": "/application-tracking",
     "Settings": "/settings",
