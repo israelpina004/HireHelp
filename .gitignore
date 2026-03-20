@@ -44,8 +44,4 @@ yarn-error.log*
 next-env.d.ts
 
 # python virtual environment
-hirehelp-backend
-
-.idea/
-
-/frontend/.gitignore
+venv

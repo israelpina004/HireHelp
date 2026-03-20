@@ -9,12 +9,15 @@ interface PageLayoutProps {
     subtitle: string;
     headerRight?: React.ReactNode;
     children: React.ReactNode;
+    name: string,
+    initials: string,
+    email: string
 }
 
-export default function PageLayout({ currentPage, title, subtitle, headerRight, children }: PageLayoutProps) {
+export default function PageLayout({ currentPage, title, subtitle, headerRight, children, name, initials, email }: PageLayoutProps) {
     return (
         <div style={{ display: "flex", minHeight: "100vh", background: "#fafafa", fontFamily: "'DM Sans', system-ui, sans-serif" }}>
-            <Sidebar currentPage={currentPage} />
+            <Sidebar currentPage={currentPage} name={name} initials={initials} email={email} />
             <main style={{ flex: 1, padding: "36px 40px", overflowY: "auto" }}>
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>
                     <div>

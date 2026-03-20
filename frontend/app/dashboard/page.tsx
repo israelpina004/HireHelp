@@ -1,7 +1,7 @@
-"use client";
-
 import PageLayout from "../../components/PageLayout";
 import { TrackingIcon, ATSIcon, ResumeAnalysisIcon, InterviewIcon } from "../../components/Icons";
+import { createClient } from "@/app/lib/supabase/server";
+import { redirect } from "next/navigation";
 
 const activityData = [
     { day: "Mon", value: 2 }, { day: "Tue", value: 3 }, { day: "Wed", value: 1 },
@@ -47,14 +47,53 @@ function StatCard({ label, value, icon }: { label: string; value: string; icon: 
     );
 }
 
-export default function Dashboard() {
+export default async function Dashboard() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if(!user || user === null){
+        return redirect("/auth/login");
+    }
+
+    let userName = "John Doe"    
+    const {data : profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+
+    if (profile) {
+        userName = profile.first_name + " " + profile.last_name;
+    }
+
+    const initials = profile.first_name[0] + profile.last_name[0];
+    
+    // Count number of applications
+    // const {data : applications } = await supabase.from("applications").select("*").eq("user_id", user.id);
+    // const applicationsCount = applications?.length || 0;
+    const applicationsCount = "0";
+    
+    // Count number of resumes optimized
+    // const {data : resumesOptimized } = await supabase.from("resumes").select("*").eq("user_id", user.id);
+    // const resumesOptimizedCount = resumesOptimized?.length || 0;
+    const resumesOptimized = "0";
+
+    // Find average ATS score
+    let avgAtsScore = "0%";
+    /*
+        if (resumesOptimized.length > 0) {
+            avgAtsScore = resumesOptimized.map((resume) => resume.ats_score).reduce((a, b) => a + b, 0) / resumesOptimized.length;
+        }
+    */
+
+    // Count number of interview preps
+    // const {data : interviewPreps } = await supabase.from("interview_preps").select("*").eq("user_id", user.id);
+    // const interviewPrepsCount = interviewPreps?.length || 0;
+    const interviewPrepsCount = "0";
+
     return (
-        <PageLayout currentPage="Dashboard" title="Dashboard" subtitle="Welcome back! Here's your job application overview.">
+        <PageLayout currentPage="Dashboard" title="Dashboard" subtitle="Welcome back! Here's your job application overview." name={userName} initials={initials} email={user.email!}>
                 <div style={{ display: "flex", gap: 16, marginBottom: 24 }}>
-                    <StatCard label="Total Applications" value="24" icon={<TrackingIcon />} />
-                    <StatCard label="Avg ATS Score" value="85%" icon={<ATSIcon />} />
-                    <StatCard label="Resumes Optimized" value="8" icon={<ResumeAnalysisIcon />} />
-                    <StatCard label="Interview Preps" value="12" icon={<InterviewIcon />} />
+                    <StatCard label="Total Applications" value={applicationsCount} icon={<TrackingIcon />} />
+                    <StatCard label="Avg ATS Score" value={avgAtsScore} icon={<ATSIcon />} />
+                    <StatCard label="Resumes Optimized" value={resumesOptimized} icon={<ResumeAnalysisIcon />} />
+                    <StatCard label="Interview Preps" value={interviewPrepsCount} icon={<InterviewIcon />} />
                 </div>
                 <div style={{ display: "flex", gap: 16, marginBottom: 24 }}>
                     <div style={{ flex: 1, background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, padding: "24px" }}>

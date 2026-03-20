@@ -5,6 +5,7 @@ import {
     DashboardIcon, ResumeAnalysisIcon, ResumeBankIcon, ATSIcon,
     InterviewIcon, TrackingIcon, SettingsIcon, HelpIcon, LogoutIcon
 } from "./Icons";
+import { logoutAction } from "@/app/auth/actions";
 
 export const sidebarItems = [
     { label: "Dashboard", icon: DashboardIcon },
@@ -31,7 +32,14 @@ export const routeMap: Record<string, string> = {
     "Help & Support": "/help",
 };
 
-export default function Sidebar({ currentPage }: { currentPage: string }) {
+interface SidebarProps {
+    currentPage: string;
+    name: string;
+    initials: string;
+    email: string;
+}
+
+export default function Sidebar({ currentPage, name, initials, email }: SidebarProps) {
     const router = useRouter();
     return (
         <div style={{ width: 220, minHeight: "100vh", background: "#fff", borderRight: "1px solid #ebebeb", display: "flex", flexDirection: "column", flexShrink: 0 }}>
@@ -65,10 +73,13 @@ export default function Sidebar({ currentPage }: { currentPage: string }) {
             </nav>
             <div style={{ padding: "16px 20px", borderTop: "1px solid #ebebeb", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#0a0a0a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#fff" }}>JD</div>
-                    <div><div style={{ fontSize: 13, fontWeight: 600, color: "#0a0a0a" }}>John Doe</div><div style={{ fontSize: 11, color: "#aaa" }}>john@example.com</div></div>
+                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#0a0a0a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#fff" }}>{initials}</div>
+                    <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "#0a0a0a" }}>{name}</div>
+                        <div style={{ fontSize: 11, color: "#aaa" }}>{email}</div>
+                    </div>
                 </div>
-                <button style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", padding: 4 }}><LogoutIcon /></button>
+                <button onClick={logoutAction} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", padding: 4 }}><LogoutIcon /></button>
             </div>
         </div>
     );
