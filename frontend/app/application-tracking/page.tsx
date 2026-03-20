@@ -3,6 +3,8 @@
 import { useState } from "react";
 import PageLayout from "../../components/PageLayout";
 import { PlusIcon, ExportIcon, EditIcon, TrashIcon, XIcon, SearchIcon } from "../../components/Icons";
+import { createClient } from "@/app/lib/supabase/server";
+import { redirect } from "next/navigation";
 
 type Status = "Applied" | "Interviewing" | "Offered" | "Rejected";
 type Application = { id: number; company: string; position: string; status: Status; atsScore: number; matchScore: number; appliedDate: string; lastUpdate: string; };
@@ -24,7 +26,23 @@ const statusConfig: Record<Status, { bg: string; color: string; border: string }
 
 const emptyForm = { company: "", position: "", status: "Applied" as Status, atsScore: "", matchScore: "", appliedDate: "" };
 
-export default function ApplicationTracking() {
+export default async function ApplicationTracking() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if(!user || user === null){
+        return redirect("/auth/login");
+    }
+
+    let userName = "John Doe"    
+    const {data : profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+
+    if (profile) {
+        userName = profile.first_name + " " + profile.last_name;
+    }
+
+    const initials = profile.first_name[0] + profile.last_name[0];
+
     const [apps, setApps] = useState<Application[]>(initialApplications);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("All Status");
@@ -62,7 +80,7 @@ export default function ApplicationTracking() {
     return (
         <PageLayout currentPage="Application Tracking" title="Application Tracking" subtitle="Manage and monitor all your job applications in one place" headerRight={
             <button onClick={openAdd} style={{ display: "flex", alignItems: "center", gap: 6, padding: "11px 18px", background: "#0a0a0a", color: "#fff", border: "none", borderRadius: 9, fontSize: 13.5, fontWeight: 600, cursor: "pointer" }}><PlusIcon /> Add Application</button>
-        }>
+        } name={userName} initials={initials} email={user.email!}>
                 <div style={{ display: "flex", gap: 14, marginBottom: 24 }}>
                     {[{ label: "Total", value: total }, { label: "Applied", value: applied }, { label: "Interviewing", value: interviewing }, { label: "Offers", value: offers }, { label: "Avg ATS", value: `${avgATS}%` }, { label: "Avg Match", value: `${avgMatch}%` }].map(({ label, value }) => (
                         <div key={label} style={{ flex: 1, background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, padding: "16px 18px" }}>
