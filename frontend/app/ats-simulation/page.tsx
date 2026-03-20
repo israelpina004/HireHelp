@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import PageLayout from "../../components/PageLayout";
 import { UploadIcon, ChevronIcon, TrackingIcon, ATSIcon } from "../../components/Icons";
+import { createClient } from "@/app/lib/supabase/server";
+import { redirect } from "next/navigation";
 
 /* ── Types ── */
 type Category = {
@@ -156,7 +158,23 @@ function CategoryCard({ category }: { category: Category }) {
 
 type View = "input" | "results";
 
-export default function ATSSimulation() {
+export default async function ATSSimulation() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if(!user || user === null){
+        return redirect("/auth/login");
+    }
+
+    let userName = "John Doe"    
+    const {data : profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+
+    if (profile) {
+        userName = profile.first_name + " " + profile.last_name;
+    }
+
+    const initials = profile.first_name[0] + profile.last_name[0];
+
     const [view, setView] = useState<View>("input");
     const [jd, setJd] = useState("");
     const [file, setFile] = useState<File | null>(null);
@@ -207,7 +225,7 @@ export default function ATSSimulation() {
     }
 
     return (
-        <PageLayout currentPage="ATS Simulation" title="ATS Simulation" subtitle="Test how well your resume performs with Applicant Tracking Systems">
+        <PageLayout currentPage="ATS Simulation" title="ATS Simulation" subtitle="Test how well your resume performs with Applicant Tracking Systems" name={userName} initials={initials} email={user.email!}>
 
                 {/* Error banner */}
                 {error && (

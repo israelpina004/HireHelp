@@ -3,6 +3,8 @@
 import { useState } from "react";
 import PageLayout from "../../components/PageLayout";
 import { InterviewIcon, ChevronIcon, CheckIcon, SparkleIcon } from "../../components/Icons";
+import { createClient } from "@/app/lib/supabase/server";
+import { redirect } from "next/navigation";
 
 // ---- Types matching the backend API response ----
 interface ApiQuestion {
@@ -107,7 +109,23 @@ function QuestionCard({ q, index, completed, onComplete }: { q: FlatQuestion; in
 
 type View = "setup" | "practice";
 
-export default function InterviewPrep() {
+export default async function InterviewPrep() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if(!user){
+        return redirect("/auth/login");
+    }
+
+    let userName = "John Doe"    
+    const {data : profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+
+    if (profile) {
+        userName = profile.first_name + " " + profile.last_name;
+    }
+
+    const initials = profile.first_name[0] + profile.last_name[0];
+
     const [view, setView] = useState<View>("setup");
     const [jobDescription, setJobDescription] = useState("");
     const [loading, setLoading] = useState(false);
@@ -155,7 +173,7 @@ export default function InterviewPrep() {
     }
 
     return (
-        <PageLayout currentPage="Interview Prep" title="Interview Preparation" subtitle="Practice with AI-generated behavioral questions tailored to the job">
+        <PageLayout currentPage="Interview Prep" title="Interview Preparation" subtitle="Practice with AI-generated behavioral questions tailored to the job" name={userName} initials={initials} email={user.email!}>
 
                 {/* ── SETUP VIEW ── */}
                 {view === "setup" && (
