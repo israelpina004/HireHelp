@@ -45,3 +45,8 @@ next-env.d.ts
 
 # python virtual environment
 venv
+hirehelp_backend
+
+.idea/
+
+/frontend/.gitignore
