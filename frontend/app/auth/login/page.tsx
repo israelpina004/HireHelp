@@ -12,9 +12,6 @@ export default async function Login() {
 
     return (
         <>
-            <div className="flex flex-col items-center pt-10">
-                <h1 className="text-6xl font-bold p-5">Welcome Back 🎉</h1>
-            </div>
             <LoginBox />
         </>
     )
