@@ -22,16 +22,7 @@ type ATSResult = {
     summary: string;
 };
 
-type ParsedResume = {
-    contact_info: { name?: string; email?: string; phone?: string; linkedin?: string; location?: string; };
-    education: { institution: string; degree: string; start_year: string; end_year: string; }[];
-    experience: { company: string; title: string; start_date: string; end_date: string; description: string; }[];
-    projects: { name: string; description: string; url?: string; }[];
-    skills: string[];
-};
-
-type AnalysisMode = "parse" | "ats";
-type Results = { mode: AnalysisMode; parsed?: ParsedResume; ats?: ATSResult; };
+type Results = { ats: ATSResult; };
 
 /* ── UI Sub-components (from ATS page) ── */
 
@@ -117,99 +108,6 @@ function CategoryCard({ category }: { category: Category }) {
     );
 }
 
-/* ── Parsed Resume Results View ── */
-
-function ParsedResumeResults({ parsed }: { parsed: ParsedResume }) {
-    const ci = parsed.contact_info;
-    return (
-        <div>
-            {/* Contact Info */}
-            <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, padding: "24px 28px", marginBottom: 20 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 600, color: "#0a0a0a", marginBottom: 16 }}>📇 Contact Information</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    {[
-                        { label: "Name", value: ci.name },
-                        { label: "Email", value: ci.email },
-                        { label: "Phone", value: ci.phone },
-                        { label: "LinkedIn", value: ci.linkedin },
-                        { label: "Location", value: ci.location },
-                    ].filter(f => f.value).map(f => (
-                        <div key={f.label}>
-                            <div style={{ fontSize: 11, fontWeight: 600, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>{f.label}</div>
-                            <div style={{ fontSize: 13.5, color: "#0a0a0a", fontWeight: 500 }}>{f.value}</div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* Skills */}
-            {parsed.skills.length > 0 && (
-                <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, padding: 24, marginBottom: 20 }}>
-                    <h3 style={{ fontSize: 15, fontWeight: 600, color: "#0a0a0a", marginBottom: 14 }}>🛠 Skills ({parsed.skills.length})</h3>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        {parsed.skills.map(s => (
-                            <span key={s} style={{ padding: "5px 12px", background: "#f5f5f5", borderRadius: 20, fontSize: 12.5, fontWeight: 500, color: "#333", border: "1px solid #e8e8e8" }}>{s}</span>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Experience */}
-            {parsed.experience.length > 0 && (
-                <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, padding: 24, marginBottom: 20 }}>
-                    <h3 style={{ fontSize: 15, fontWeight: 600, color: "#0a0a0a", marginBottom: 16 }}>💼 Experience ({parsed.experience.length})</h3>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                        {parsed.experience.map((exp, i) => (
-                            <div key={i} style={{ padding: "14px 16px", background: "#fafafa", borderRadius: 10, borderLeft: "4px solid #0a0a0a" }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                                    <div>
-                                        <div style={{ fontSize: 14, fontWeight: 600, color: "#0a0a0a" }}>{exp.title}</div>
-                                        <div style={{ fontSize: 13, color: "#555" }}>{exp.company}</div>
-                                    </div>
-                                    <span style={{ fontSize: 12, color: "#aaa", whiteSpace: "nowrap" }}>{exp.start_date} — {exp.end_date}</span>
-                                </div>
-                                {exp.description && <p style={{ fontSize: 12.5, color: "#666", lineHeight: 1.6, marginTop: 8 }}>{exp.description}</p>}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Education */}
-            {parsed.education.length > 0 && (
-                <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, padding: 24, marginBottom: 20 }}>
-                    <h3 style={{ fontSize: 15, fontWeight: 600, color: "#0a0a0a", marginBottom: 16 }}>🎓 Education ({parsed.education.length})</h3>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                        {parsed.education.map((edu, i) => (
-                            <div key={i} style={{ padding: "12px 16px", background: "#fafafa", borderRadius: 10, borderLeft: "4px solid #555" }}>
-                                <div style={{ fontSize: 14, fontWeight: 600, color: "#0a0a0a" }}>{edu.degree}</div>
-                                <div style={{ fontSize: 13, color: "#555" }}>{edu.institution}</div>
-                                <div style={{ fontSize: 12, color: "#aaa", marginTop: 4 }}>{edu.start_year} — {edu.end_year}</div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Projects */}
-            {parsed.projects.length > 0 && (
-                <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, padding: 24 }}>
-                    <h3 style={{ fontSize: 15, fontWeight: 600, color: "#0a0a0a", marginBottom: 16 }}>🚀 Projects ({parsed.projects.length})</h3>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                        {parsed.projects.map((proj, i) => (
-                            <div key={i} style={{ padding: "12px 16px", background: "#fafafa", borderRadius: 10, borderLeft: "4px solid #ca8a04" }}>
-                                <div style={{ fontSize: 14, fontWeight: 600, color: "#0a0a0a" }}>{proj.name}</div>
-                                {proj.description && <p style={{ fontSize: 12.5, color: "#666", lineHeight: 1.6, marginTop: 4 }}>{proj.description}</p>}
-                                {proj.url && <a href={proj.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: "#1d4ed8", marginTop: 4, display: "inline-block" }}>{proj.url}</a>}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-}
-
 /* ── Main Client Component ── */
 
 type View = "input" | "results";
@@ -237,8 +135,7 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
     const [grading, setGrading] = useState(false);
     const [downloadingPdf, setDownloadingPdf] = useState(false);
 
-    const hasJD = jd.trim().length > 0;
-    const canRun = file != null;
+    const canRun = file != null && jd.trim().length > 0;
 
     async function handleAnalyze() {
         if (!file) return;
@@ -261,49 +158,41 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
             // Save the uploaded resume to Supabase
             const extractedText = uploadData.raw_text || uploadData.text || "";
             setResumeText(extractedText);
-            const { raw_text: _rawText, text: _text, ...parsedFields } = uploadData;
             const supabase = createClient();
             await supabase.from("resumes").insert({
                 user_id: userId,
                 file_path: file.name,
                 file_text: extractedText,
-                parsed_data: parsedFields,
                 resume_type: "uploaded",
             });
 
-            if (hasJD) {
-                // ATS mode: parse + ATS analysis
-                if (!extractedText) throw new Error("Could not extract text from the PDF.");
+            if (!extractedText) throw new Error("Could not extract text from the PDF.");
 
-                const atsRes = await fetch("http://127.0.0.1:5001/api/ats/optimize", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ resume_text: extractedText, job_description: jd }),
-                });
+            const atsRes = await fetch("http://127.0.0.1:5001/api/ats/optimize", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ resume_text: extractedText, job_description: jd }),
+            });
 
-                if (!atsRes.ok) throw new Error("Failed to run ATS simulation.");
-                const atsData: ATSResult = await atsRes.json();
+            if (!atsRes.ok) throw new Error("Failed to run ATS simulation.");
+            const atsData: ATSResult = await atsRes.json();
 
-                // Persist ATS analysis to Supabase
-                await supabase.from("ats_analyses").insert({
-                    user_id: userId,
-                    job_description: jd,
-                    ats_score: atsData.ats_score,
-                    semantic_score: atsData.semantic_score,
-                    keyword_match_score: atsData.keyword_match_score,
-                    categories: atsData.categories,
-                    suggestions: atsData.suggestions,
-                    matching_keywords: atsData.matching_keywords,
-                    missing_keywords: atsData.missing_keywords,
-                    summary: atsData.summary,
-                });
+            // Persist ATS analysis to Supabase
+            await supabase.from("ats_analyses").insert({
+                user_id: userId,
+                job_description: jd,
+                ats_score: atsData.ats_score,
+                semantic_score: atsData.semantic_score,
+                keyword_match_score: atsData.keyword_match_score,
+                categories: atsData.categories,
+                suggestions: atsData.suggestions,
+                matching_keywords: atsData.matching_keywords,
+                missing_keywords: atsData.missing_keywords,
+                summary: atsData.summary,
+            });
 
-                setSelectedSuggestions(new Set());
-                setResults({ mode: "ats", ats: atsData });
-            } else {
-                // Parse-only mode: show extracted resume data
-                setResults({ mode: "parse", parsed: parsedFields as ParsedResume });
-            }
+            setSelectedSuggestions(new Set());
+            setResults({ ats: atsData });
 
             setView("results");
         } catch (err: unknown) {
@@ -446,7 +335,7 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
     }
 
     return (
-        <PageLayout currentPage="Resume Analysis" title="Resume Analysis" subtitle="Upload your resume for AI-powered parsing, or add a job description for a full ATS simulation" name={userName} initials={initials} email={email}>
+        <PageLayout currentPage="Resume Analysis" title="Resume Analysis" subtitle="Upload your resume and paste a job description to run an ATS simulation — both are required." name={userName} initials={initials} email={email}>
 
                 {/* Error banner */}
                 {error && (
@@ -478,48 +367,24 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
 
                             {/* Job description */}
                             <div style={{ flex: 1, background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, padding: 24 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
                                     <TrackingIcon />
                                     <h2 style={{ fontSize: 15, fontWeight: 600, color: "#0a0a0a" }}>Job Description</h2>
-                                    <span style={{ fontSize: 12, color: "#aaa", fontWeight: 500 }}>(Optional)</span>
                                 </div>
-                                <p style={{ fontSize: 12, color: "#888", marginBottom: 16 }}>
-                                    {hasJD ? "✓ ATS Simulation mode — your resume will be scored against this job description" : "Leave empty to get a general resume analysis, or paste a JD for a full ATS simulation"}
-                                </p>
                                 <textarea value={jd} onChange={e => setJd(e.target.value)} placeholder="Paste the job description here for an ATS simulation..." style={{ width: "100%", height: 298, padding: 14, border: "1px solid #e8e8e8", borderRadius: 8, fontSize: 12.5, color: "#333", lineHeight: 1.6, fontFamily: "'DM Sans', system-ui, sans-serif", background: "#fafafa" }} />
                             </div>
                         </div>
 
-                        <div style={{ marginTop: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <span style={{ width: 8, height: 8, borderRadius: "50%", background: hasJD ? "#16a34a" : "#ca8a04" }} />
-                                <span style={{ fontSize: 13, color: "#888" }}>
-                                    {hasJD ? "ATS Simulation — resume will be scored against the job description" : "Resume Analysis — general resume parsing and extraction"}
-                                </span>
-                            </div>
+                        <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
                             <button onClick={handleAnalyze} disabled={!canRun || running} style={{ padding: "12px 32px", background: canRun ? "#0a0a0a" : "#d0d0d0", color: "#fff", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 600, cursor: canRun ? "pointer" : "not-allowed", display: "flex", alignItems: "center", gap: 8 }}>
-                                {running ? (<><span style={{ width: 14, height: 14, border: "2px solid #ffffff44", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} />{hasJD ? "Running ATS Simulation..." : "Analyzing Resume..."}</>) : (hasJD ? "Run ATS Simulation →" : "Analyze Resume →")}
+                                {running ? (<><span style={{ width: 14, height: 14, border: "2px solid #ffffff44", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} />Running ATS Simulation...</>) : "Run ATS Simulation →"}
                             </button>
                         </div>
                     </div>
                 )}
 
-                {/* ═══ PARSE-ONLY RESULTS ═══ */}
-                {view === "results" && results?.mode === "parse" && results.parsed && (
-                    <div style={{ animation: "fadeIn 0.3s ease" }}>
-                        <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, padding: "20px 28px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                            <div>
-                                <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0a0a0a", letterSpacing: "-0.02em" }}>Resume Parsed Successfully</h2>
-                                <p style={{ fontSize: 13, color: "#888", marginTop: 4 }}>Here&apos;s what we extracted from your resume. Add a job description to run a full ATS simulation.</p>
-                            </div>
-                            <button onClick={handleReset} style={{ padding: "10px 20px", background: "#fff", border: "1px solid #d0d0d0", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#555", whiteSpace: "nowrap", flexShrink: 0 }}>← Analyze Another</button>
-                        </div>
-                        <ParsedResumeResults parsed={results.parsed} />
-                    </div>
-                )}
-
                 {/* ═══ ATS RESULTS ═══ */}
-                {view === "results" && results?.mode === "ats" && results.ats && (() => {
+                {view === "results" && results?.ats && (() => {
                     const ats = results.ats;
                     return (
                         <div style={{ animation: "fadeIn 0.3s ease" }}>
