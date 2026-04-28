@@ -3,6 +3,7 @@
 import { useState } from "react";
 import PageLayout from "../../components/PageLayout";
 import { InterviewIcon, ChevronIcon, CheckIcon, SparkleIcon } from "../../components/Icons";
+import { createClient } from "@/app/lib/supabase/client";
 
 // ---- Types matching the backend API response ----
 interface ApiQuestion { id: string; question: string; why_asked: string; difficulty: "easy" | "medium" | "hard"; }
@@ -75,12 +76,13 @@ function QuestionCard({ q, index, completed, onComplete }: { q: FlatQuestion; in
 type View = "setup" | "practice";
 
 interface InterviewPrepClientProps {
+    userId: string;
     userName: string;
     initials: string;
     email: string;
 }
 
-export default function InterviewPrepClient({ userName, initials, email }: InterviewPrepClientProps) {
+export default function InterviewPrepClient({ userId, userName, initials, email }: InterviewPrepClientProps) {
     const [view, setView] = useState<View>("setup");
     const [jobDescription, setJobDescription] = useState("");
     const [loading, setLoading] = useState(false);
@@ -104,6 +106,16 @@ export default function InterviewPrepClient({ userName, initials, email }: Inter
             const data: ApiResponse = await res.json();
             const flat = flattenResponse(data);
             if (flat.length === 0) throw new Error("No questions were generated. Try a more detailed job description.");
+
+            const supabase = createClient();
+            const { error: sessionError } = await supabase.from("interview_prep").insert({
+                user_id: userId,
+            });
+
+            if (sessionError) {
+                console.error("Failed to persist interview session", sessionError);
+            }
+
             setQuestions(flat); setJobTitle(data.job_title); setCompleted([]); setSelectedCategory("All"); setView("practice");
         } catch (err: unknown) { setError(err instanceof Error ? err.message : "Something went wrong. Please try again."); }
         finally { setLoading(false); }
