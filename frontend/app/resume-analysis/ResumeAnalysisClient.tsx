@@ -147,7 +147,8 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
             const formData = new FormData();
             formData.append("file", file);
 
-            const uploadRes = await fetch("http://127.0.0.1:5001/api/resume_parser/upload", {
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5001";
+            const uploadRes = await fetch(`${API_URL}/api/resume_parser/upload`, {
                 method: "POST",
                 body: formData,
             });
@@ -180,7 +181,8 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
 
             if (!extractedText) throw new Error("Could not extract text from the PDF.");
 
-            const atsRes = await fetch("http://127.0.0.1:5001/api/ats/optimize", {
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5001";
+            const atsRes = await fetch(`${API_URL}/api/ats/optimize`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ resume_text: extractedText, job_description: jd }),
@@ -258,7 +260,8 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
 
         try {
             const selected = results.ats.suggestions.filter((_, i) => selectedSuggestions.has(i));
-            const res = await fetch("http://127.0.0.1:5001/api/ats/rewrite", {
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5001";
+            const res = await fetch(`${API_URL}/api/ats/rewrite`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -292,7 +295,8 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
         if (!rewrittenData) return;
         setDownloadingPdf(true);
         try {
-            const res = await fetch("http://127.0.0.1:5001/api/ats/export-pdf", {
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5001";
+            const res = await fetch(`${API_URL}/api/ats/export-pdf`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ structured_resume: rewrittenData.rewritten_resume }),
@@ -320,7 +324,8 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
         setGrading(true);
         setError(null);
         try {
-            const res = await fetch("http://127.0.0.1:5001/api/ats/optimize", {
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5001";
+            const res = await fetch(`${API_URL}/api/ats/optimize`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ resume_text: rewrittenData.rewritten_text, job_description: jd }),

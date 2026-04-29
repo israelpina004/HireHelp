@@ -93,7 +93,8 @@ export default function ApplicationTrackingClient({ userId, userName, initials, 
                 
                 if (latestResume?.file_text) {
                     try {
-                        const atsRes = await fetch("http://127.0.0.1:5001/api/ats/optimize", {
+                        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5001";
+                        const atsRes = await fetch(`${API_URL}/api/ats/optimize`, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ resume_text: latestResume.file_text, job_description: form.summary }),
