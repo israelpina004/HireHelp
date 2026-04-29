@@ -83,19 +83,22 @@ export default function ApplicationTrackingClient({ userId, userName, initials, 
             
             // Generate ATS score automatically if adding new and have a summary
             if (editingId === null && form.summary && !form.atsScore) {
-                // 1. Check if this exact Job Description was already analyzed
-                const { data: existingAnalysis } = await supabase
+                // 1. Check if this Job Description was already analyzed (robust match)
+                const { data: recentAnalyses } = await supabase
                     .from("ats_analyses")
-                    .select("ats_score")
+                    .select("ats_score, job_description")
                     .eq("user_id", userId)
-                    .eq("job_description", form.summary)
                     .order("created_at", { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
+                    .limit(50);
 
-                if (existingAnalysis?.ats_score != null) {
+                const normalizedInput = form.summary.trim().toLowerCase().replace(/\s+/g, " ");
+                const matchedAnalysis = recentAnalyses?.find(a => 
+                    a.job_description && a.job_description.trim().toLowerCase().replace(/\s+/g, " ") === normalizedInput
+                );
+
+                if (matchedAnalysis?.ats_score != null) {
                     // Perfect! They already analyzed this on the Resume Analysis page.
-                    finalAtsScore = existingAnalysis.ats_score;
+                    finalAtsScore = matchedAnalysis.ats_score;
                 } else {
                     // 2. Not found, let's fetch the latest resume and calculate it fresh
                     const { data: latestResume } = await supabase
