@@ -21,6 +21,7 @@ export default async function ApplicationTracking() {
 
     return (
         <ApplicationTrackingClient
+            userId={user.id}
             userName={userName}
             initials={initials}
             email={user.email!}
