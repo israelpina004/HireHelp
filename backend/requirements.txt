@@ -6,11 +6,6 @@ supabase
 pymupdf
 # spacy
 python-docx
-sentence-transformers
-transformers
-torch
-scikit-learn
-numpy
 redis
 gunicorn
 reportlab
