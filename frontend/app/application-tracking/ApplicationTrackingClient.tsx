@@ -83,31 +83,31 @@ export default function ApplicationTrackingClient({ userId, userName, initials, 
             
             // Generate ATS score automatically if adding new and have a summary
             if (editingId === null && form.summary && !form.atsScore) {
-                const { data: latestResume } = await supabase
-                    .from("resumes")
-                    .select("file_text")
+                // 1. Check if this exact Job Description was already analyzed
+                const { data: existingAnalysis } = await supabase
+                    .from("ats_analyses")
+                    .select("ats_score")
                     .eq("user_id", userId)
+                    .eq("job_description", form.summary)
                     .order("created_at", { ascending: false })
                     .limit(1)
-                    .single();
-                
-                if (latestResume?.file_text) {
-                    try {
-                        // 1. Check if this exact Job Description was already analyzed
-                        const { data: existingAnalysis } = await supabase
-                            .from("ats_analyses")
-                            .select("ats_score")
-                            .eq("user_id", userId)
-                            .eq("job_description", form.summary)
-                            .order("created_at", { ascending: false })
-                            .limit(1)
-                            .single();
+                    .maybeSingle();
 
-                        if (existingAnalysis?.ats_score != null) {
-                            // Perfect! They already analyzed this on the Resume Analysis page.
-                            finalAtsScore = existingAnalysis.ats_score;
-                        } else {
-                            // 2. Not found, let's calculate it fresh
+                if (existingAnalysis?.ats_score != null) {
+                    // Perfect! They already analyzed this on the Resume Analysis page.
+                    finalAtsScore = existingAnalysis.ats_score;
+                } else {
+                    // 2. Not found, let's fetch the latest resume and calculate it fresh
+                    const { data: latestResume } = await supabase
+                        .from("resumes")
+                        .select("file_text")
+                        .eq("user_id", userId)
+                        .order("created_at", { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+
+                    if (latestResume?.file_text) {
+                        try {
                             const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5001").replace(/\/$/, "");
                             const atsRes = await fetch(`${API_URL}/api/ats/optimize`, {
                                 method: "POST",
@@ -125,19 +125,19 @@ export default function ApplicationTrackingClient({ userId, userName, initials, 
                             } else {
                                 throw new Error(`ATS API failed with status ${atsRes.status}`);
                             }
-                        }
-                    } catch (error) {
-                        console.warn("ATS optimization failed, falling back to latest stored ATS score:", error);
-                        const { data: latestAts } = await supabase
-                            .from("ats_analyses")
-                            .select("ats_score")
-                            .eq("user_id", userId)
-                            .order("created_at", { ascending: false })
-                            .limit(1)
-                            .single();
-                        
-                        if (latestAts?.ats_score != null) {
-                            finalAtsScore = latestAts.ats_score;
+                        } catch (error) {
+                            console.warn("ATS optimization failed, falling back to latest stored ATS score:", error);
+                            const { data: latestAts } = await supabase
+                                .from("ats_analyses")
+                                .select("ats_score")
+                                .eq("user_id", userId)
+                                .order("created_at", { ascending: false })
+                                .limit(1)
+                                .maybeSingle();
+                            
+                            if (latestAts?.ats_score != null) {
+                                finalAtsScore = latestAts.ats_score;
+                            }
                         }
                     }
                 }
