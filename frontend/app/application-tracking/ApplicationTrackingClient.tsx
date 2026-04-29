@@ -93,22 +93,38 @@ export default function ApplicationTrackingClient({ userId, userName, initials, 
                 
                 if (latestResume?.file_text) {
                     try {
-                        const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5001").replace(/\/$/, "");
-                        const atsRes = await fetch(`${API_URL}/api/ats/optimize`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ resume_text: latestResume.file_text, job_description: form.summary }),
-                        });
-                        
-                        if (atsRes.ok) {
-                            const atsData = await atsRes.json();
-                            if (atsData.ats_score != null) {
-                                finalAtsScore = atsData.ats_score;
-                            } else {
-                                throw new Error("No ATS score returned from API");
-                            }
+                        // 1. Check if this exact Job Description was already analyzed
+                        const { data: existingAnalysis } = await supabase
+                            .from("ats_analyses")
+                            .select("ats_score")
+                            .eq("user_id", userId)
+                            .eq("job_description", form.summary)
+                            .order("created_at", { ascending: false })
+                            .limit(1)
+                            .single();
+
+                        if (existingAnalysis?.ats_score != null) {
+                            // Perfect! They already analyzed this on the Resume Analysis page.
+                            finalAtsScore = existingAnalysis.ats_score;
                         } else {
-                            throw new Error(`ATS API failed with status ${atsRes.status}`);
+                            // 2. Not found, let's calculate it fresh
+                            const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5001").replace(/\/$/, "");
+                            const atsRes = await fetch(`${API_URL}/api/ats/optimize`, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ resume_text: latestResume.file_text, job_description: form.summary }),
+                            });
+                            
+                            if (atsRes.ok) {
+                                const atsData = await atsRes.json();
+                                if (atsData.ats_score != null) {
+                                    finalAtsScore = atsData.ats_score;
+                                } else {
+                                    throw new Error("No ATS score returned from API");
+                                }
+                            } else {
+                                throw new Error(`ATS API failed with status ${atsRes.status}`);
+                            }
                         }
                     } catch (error) {
                         console.warn("ATS optimization failed, falling back to latest stored ATS score:", error);
