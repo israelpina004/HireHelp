@@ -6,6 +6,8 @@ import ScoreRing from "../../components/ScoreRing";
 import { ResumeAnalysisIcon, TrackingIcon, UploadIcon, CheckIcon, ChevronIcon } from "../../components/Icons";
 import { createClient } from "@/app/lib/supabase/client";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5001";
+
 /* ── Shared Types ── */
 
 type Category = { name: string; matched: string[]; missing: string[]; score: number; };
@@ -147,7 +149,7 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
             const formData = new FormData();
             formData.append("file", file);
 
-            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5001";
+
             const uploadRes = await fetch(`${API_URL}/api/resume_parser/upload`, {
                 method: "POST",
                 body: formData,
@@ -181,7 +183,7 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
 
             if (!extractedText) throw new Error("Could not extract text from the PDF.");
 
-            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5001";
+
             const atsRes = await fetch(`${API_URL}/api/ats/optimize`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -260,7 +262,7 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
 
         try {
             const selected = results.ats.suggestions.filter((_, i) => selectedSuggestions.has(i));
-            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5001";
+
             const res = await fetch(`${API_URL}/api/ats/rewrite`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -295,7 +297,7 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
         if (!rewrittenData) return;
         setDownloadingPdf(true);
         try {
-            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5001";
+
             const res = await fetch(`${API_URL}/api/ats/export-pdf`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -324,7 +326,7 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
         setGrading(true);
         setError(null);
         try {
-            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5001";
+
             const res = await fetch(`${API_URL}/api/ats/optimize`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
