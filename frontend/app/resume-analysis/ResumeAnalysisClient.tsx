@@ -3,7 +3,7 @@
 import { useState } from "react";
 import PageLayout from "../../components/PageLayout";
 import ScoreRing from "../../components/ScoreRing";
-import { ResumeAnalysisIcon, TrackingIcon, UploadIcon, CheckIcon, ChevronIcon, ATSIcon } from "../../components/Icons";
+import { ResumeAnalysisIcon, TrackingIcon, UploadIcon, CheckIcon, ChevronIcon } from "../../components/Icons";
 import { createClient } from "@/app/lib/supabase/client";
 
 /* ── Shared Types ── */
@@ -159,12 +159,24 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
             const extractedText = uploadData.raw_text || uploadData.text || "";
             setResumeText(extractedText);
             const supabase = createClient();
-            await supabase.from("resumes").insert({
-                user_id: userId,
-                file_path: file.name,
-                file_text: extractedText,
-                resume_type: "uploaded",
-            });
+            const { data: savedResume, error: resumeInsertError } = await supabase
+                .from("resumes")
+                .insert({
+                    user_id: userId,
+                    file_path: file.name,
+                    file_text: extractedText,
+                    resume_type: "uploaded",
+                })
+                .select("id")
+                .single();
+
+            if (resumeInsertError) {
+                throw new Error(`Failed to save uploaded resume: ${resumeInsertError.message}`);
+            }
+
+            if (!savedResume?.id) {
+                throw new Error("Failed to save uploaded resume: missing resume id in response.");
+            }
 
             if (!extractedText) throw new Error("Could not extract text from the PDF.");
 
@@ -178,8 +190,9 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
             const atsData: ATSResult = await atsRes.json();
 
             // Persist ATS analysis to Supabase
-            await supabase.from("ats_analyses").insert({
+            const { error: atsInsertError } = await supabase.from("ats_analyses").insert({
                 user_id: userId,
+                resume_id: savedResume.id,
                 job_description: jd,
                 ats_score: atsData.ats_score,
                 semantic_score: atsData.semantic_score,
@@ -190,6 +203,10 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
                 missing_keywords: atsData.missing_keywords,
                 summary: atsData.summary,
             });
+
+            if (atsInsertError) {
+                throw new Error(`Failed to save ATS analysis: ${atsInsertError.message}`);
+            }
 
             setSelectedSuggestions(new Set());
             setResults({ ats: atsData });

@@ -21,6 +21,7 @@ export default async function InterviewPrep() {
 
     return (
         <InterviewPrepClient
+            userId={user.id}
             userName={userName}
             initials={initials}
             email={user.email!}
