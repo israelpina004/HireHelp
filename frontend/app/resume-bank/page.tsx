@@ -18,6 +18,16 @@ type AtsAnalysisRow = {
     created_at: string | null;
 };
 
+const RESUME_PDF_BUCKET = "resume_pdfs";
+
+function getResumeStoragePath(filePath: string | null) {
+    if (!filePath || !filePath.includes("/")) {
+        return null;
+    }
+
+    return filePath;
+}
+
 function toNumber(value: number | string | null | undefined) {
     if (typeof value === "number") {
         return Number.isFinite(value) ? value : null;
@@ -29,6 +39,28 @@ function toNumber(value: number | string | null | undefined) {
     }
 
     return null;
+}
+
+function getResumeDisplayName(filePath: string | null) {
+    if (!filePath) {
+        return "Untitled resume";
+    }
+
+    const trimmed = filePath.trim();
+    if (!trimmed) {
+        return "Untitled resume";
+    }
+
+    return trimmed.split("/").pop()?.trim() || trimmed;
+}
+
+function getResumePdfUrl(supabase: Awaited<ReturnType<typeof createClient>>, filePath: string | null) {
+    const storagePath = getResumeStoragePath(filePath);
+    if (!storagePath) {
+        return null;
+    }
+
+    return supabase.storage.from(RESUME_PDF_BUCKET).getPublicUrl(storagePath).data.publicUrl;
 }
 
 export default async function ResumeBank() {
@@ -70,8 +102,10 @@ export default async function ResumeBank() {
 
         return {
             id: resume.id,
-            filePath: resume.file_path ?? "Untitled resume",
+            filePath: getResumeDisplayName(resume.file_path),
             fileText: resume.file_text ?? "",
+            storagePath: getResumeStoragePath(resume.file_path),
+            pdfUrl: getResumePdfUrl(supabase, resume.file_path),
             createdAt: resume.created_at,
             atsScore: toNumber(latestAnalysis?.ats_score),
             jobDescription: latestAnalysis?.job_description ?? "",
