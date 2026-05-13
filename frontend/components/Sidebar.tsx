@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import {
-    DashboardIcon, ResumeAnalysisIcon, ResumeBankIcon, ATSIcon,
-    InterviewIcon, TrackingIcon, SettingsIcon, HelpIcon, LogoutIcon
+    DashboardIcon, ResumeAnalysisIcon, ResumeBankIcon,
+    InterviewIcon, TrackingIcon, HelpIcon, LogoutIcon
 } from "./Icons";
 import { logoutAction } from "@/app/auth/actions";
 
@@ -16,8 +16,7 @@ export const sidebarItems = [
 ];
 
 export const otherItems = [
-    { label: "Settings", icon: SettingsIcon },
-    { label: "Help & Support", icon: HelpIcon },
+    { label: "About Us", icon: HelpIcon },
 ];
 
 export const routeMap: Record<string, string> = {
@@ -26,6 +25,7 @@ export const routeMap: Record<string, string> = {
     "Resume Bank": "/resume-bank",
     "Interview Prep": "/interview-prep",
     "Application Tracking": "/application-tracking",
+    "About Us": "/about-us",
     "Settings": "/settings",
     "Help & Support": "/help",
 };
@@ -63,11 +63,14 @@ export default function Sidebar({ currentPage, name, initials, email }: SidebarP
                     );
                 })}
                 <div style={{ fontSize: 11, fontWeight: 600, color: "#bbb", letterSpacing: "0.08em", textTransform: "uppercase", padding: "0 8px", marginTop: 20, marginBottom: 8 }}>Other</div>
-                {otherItems.map(({ label, icon: Icon }) => (
-                    <button key={label} onClick={() => router.push(routeMap[label])} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "9px 10px", borderRadius: 8, background: "transparent", color: "#888", border: "none", cursor: "pointer", fontSize: 13.5, marginBottom: 2, textAlign: "left" }}>
-                        <Icon />{label}
-                    </button>
-                ))}
+                {otherItems.map(({ label, icon: Icon }) => {
+                    const isActive = currentPage === label;
+                    return (
+                        <button key={label} onClick={() => router.push(routeMap[label])} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "9px 10px", borderRadius: 8, background: isActive ? "#0a0a0a" : "transparent", color: isActive ? "#fff" : "#888", border: "none", cursor: "pointer", fontSize: 13.5, fontWeight: isActive ? 600 : 400, marginBottom: 2, textAlign: "left", transition: "all 0.15s ease" }}>
+                            <Icon />{label}
+                        </button>
+                    );
+                })}
             </nav>
             <div style={{ padding: "16px 20px", borderTop: "1px solid #ebebeb", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

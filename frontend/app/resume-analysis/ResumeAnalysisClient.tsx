@@ -26,6 +26,8 @@ type ATSResult = {
 
 type Results = { ats: ATSResult; };
 
+const RESUME_PDF_BUCKET = "resume_pdfs";
+
 /* ── UI Sub-components (from ATS page) ── */
 
 function MiniScoreBar({ score, label }: { score: number; label: string }) {
@@ -114,6 +116,10 @@ function CategoryCard({ category }: { category: Category }) {
 
 type View = "input" | "results";
 
+function buildResumeStoragePath(userId: string, fileName: string) {
+    return `${userId}/${crypto.randomUUID()}/${fileName}`;
+}
+
 interface ResumeAnalysisClientProps {
     userId: string;
     userName: string;
@@ -163,11 +169,24 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
             const extractedText = uploadData.raw_text || uploadData.text || "";
             setResumeText(extractedText);
             const supabase = createClient();
+            const storagePath = buildResumeStoragePath(userId, file.name);
+            const { error: storageUploadError } = await supabase.storage
+                .from(RESUME_PDF_BUCKET)
+                .upload(storagePath, file, {
+                    cacheControl: "3600",
+                    contentType: file.type || "application/pdf",
+                    upsert: false,
+                });
+
+            if (storageUploadError) {
+                throw new Error(`Failed to store uploaded resume PDF: ${storageUploadError.message}`);
+            }
+
             const { data: savedResume, error: resumeInsertError } = await supabase
                 .from("resumes")
                 .insert({
                     user_id: userId,
-                    file_path: file.name,
+                    file_path: storagePath,
                     file_text: extractedText,
                     resume_type: "uploaded",
                 })
@@ -175,6 +194,7 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
                 .single();
 
             if (resumeInsertError) {
+                await supabase.storage.from(RESUME_PDF_BUCKET).remove([storagePath]);
                 throw new Error(`Failed to save uploaded resume: ${resumeInsertError.message}`);
             }
 

@@ -105,6 +105,19 @@ function truncateText(value: string | null | undefined, maxLength: number) {
     return `${trimmed.slice(0, maxLength - 1).trimEnd()}…`;
 }
 
+function getResumeDisplayName(filePath: string | null | undefined) {
+    if (!filePath) {
+        return "";
+    }
+
+    const trimmed = filePath.trim();
+    if (!trimmed) {
+        return "";
+    }
+
+    return trimmed.split("/").pop()?.trim() || trimmed;
+}
+
 function buildResumeUploadActivity(resumes: ResumeRow[], weekStart: Date): DashboardDatum[] {
     const counts = new Array(7).fill(0);
     const weekEnd = addDays(weekStart, 7);
@@ -159,7 +172,7 @@ function buildRecentActivity(
         .filter((resume) => Boolean(resume.created_at))
         .map((resume) => ({
             action: resume.resume_type === "uploaded" ? "Resume uploaded for optimization" : "Resume saved",
-            detail: resume.file_path ? truncateText(resume.file_path, 72) : "Resume added to your workspace",
+            detail: resume.file_path ? truncateText(getResumeDisplayName(resume.file_path), 72) : "Resume added to your workspace",
             time: formatRelativeTime(resume.created_at!),
             createdAt: resume.created_at!,
         }));

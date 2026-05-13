@@ -1,14 +1,19 @@
 "use client";
 
+import { createClient } from "@/app/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PageLayout from "../../components/PageLayout";
-import { FileIcon, SearchIcon, UploadIcon, XIcon } from "../../components/Icons";
+import { FileIcon, SearchIcon, TrashIcon, UploadIcon, XIcon } from "../../components/Icons";
+
+const RESUME_PDF_BUCKET = "resume_pdfs";
 
 export type ResumeBankItem = {
     id: number;
     filePath: string;
     fileText: string;
+    storagePath: string | null;
+    pdfUrl: string | null;
     createdAt: string | null;
     atsScore: number | null;
     jobDescription: string;
@@ -111,7 +116,17 @@ function ResumeCard({ resume, onOpen }: { resume: ResumeBankItem; onOpen: (resum
     );
 }
 
-function ResumePreviewModal({ resume, onClose }: { resume: ResumeBankItem; onClose: () => void; }) {
+function ResumePreviewModal({
+    resume,
+    onClose,
+    onDelete,
+    isDeleting,
+}: {
+    resume: ResumeBankItem;
+    onClose: () => void;
+    onDelete: (resume: ResumeBankItem) => void;
+    isDeleting: boolean;
+}) {
     const roundedScore = resume.atsScore !== null ? Math.round(resume.atsScore) : null;
 
     return (
@@ -129,7 +144,30 @@ function ResumePreviewModal({ resume, onClose }: { resume: ResumeBankItem; onClo
                         <h2 style={{ fontSize: 22, fontWeight: 700, color: "#0a0a0a", letterSpacing: "-0.03em", fontFamily: "'DM Serif Display', Georgia, serif" }}>{resume.filePath}</h2>
                         <p style={{ fontSize: 13, color: "#888", marginTop: 6 }}>Uploaded {formatDate(resume.createdAt)}{resume.analysisCreatedAt ? ` · Last scored ${formatDate(resume.analysisCreatedAt)}` : ""}</p>
                     </div>
-                    <button type="button" onClick={onClose} style={{ background: "none", border: "none", color: "#777", cursor: "pointer", padding: 4 }}><XIcon /></button>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <button
+                            type="button"
+                            onClick={() => onDelete(resume)}
+                            disabled={isDeleting}
+                            style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 8,
+                                padding: "9px 14px",
+                                borderRadius: 10,
+                                border: "1px solid #f3d0d0",
+                                background: isDeleting ? "#faf5f5" : "#fff5f5",
+                                color: isDeleting ? "#b17d7d" : "#c24141",
+                                cursor: isDeleting ? "not-allowed" : "pointer",
+                                fontSize: 13,
+                                fontWeight: 600,
+                            }}
+                        >
+                            <TrashIcon />
+                            {isDeleting ? "Deleting..." : "Delete Resume"}
+                        </button>
+                        <button type="button" onClick={onClose} style={{ background: "none", border: "none", color: "#777", cursor: "pointer", padding: 4 }}><XIcon /></button>
+                    </div>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 0, flex: 1, minHeight: 0, overflow: "hidden" }}>
@@ -149,10 +187,32 @@ function ResumePreviewModal({ resume, onClose }: { resume: ResumeBankItem; onClo
                     </aside>
 
                     <section style={{ padding: 24, minHeight: 0, overflowY: "auto" }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 10 }}>Resume Preview</div>
-                        <div style={{ border: "1px solid #ececec", borderRadius: 14, background: "#fff", padding: 20, minHeight: 420, fontSize: 13.5, color: "#333", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
-                            {resume.fileText.trim() || "No extracted resume text is stored for this upload yet."}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: "#888" }}>Resume Preview</div>
+                            {resume.pdfUrl && (
+                                <a
+                                    href={resume.pdfUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    style={{ fontSize: 12, fontWeight: 600, color: "#0a0a0a", textDecoration: "none" }}
+                                >
+                                    Open PDF
+                                </a>
+                            )}
                         </div>
+                        {resume.pdfUrl ? (
+                            <div style={{ border: "1px solid #ececec", borderRadius: 14, background: "#f7f7f7", overflow: "hidden", minHeight: 560 }}>
+                                <iframe
+                                    title={`${resume.filePath} PDF preview`}
+                                    src={resume.pdfUrl}
+                                    style={{ width: "100%", height: "min(72vh, 860px)", border: "none", display: "block", background: "#f7f7f7" }}
+                                />
+                            </div>
+                        ) : (
+                            <div style={{ border: "1px solid #ececec", borderRadius: 14, background: "#fff", padding: 20, minHeight: 420, fontSize: 13.5, color: "#333", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+                                {resume.fileText.trim() || "This resume was uploaded before PDF storage was enabled, so only the extracted text is available here."}
+                            </div>
+                        )}
                     </section>
                 </div>
             </div>
@@ -165,15 +225,76 @@ export default function ResumeBankClient({ userName, initials, email, resumes }:
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState<Filter>("All Resumes");
     const [sort, setSort] = useState<Sort>("Sort by Date");
+    const [resumeItems, setResumeItems] = useState(resumes);
     const [selectedResume, setSelectedResume] = useState<ResumeBankItem | null>(null);
+    const [deletingResumeId, setDeletingResumeId] = useState<number | null>(null);
+    const [deleteNotice, setDeleteNotice] = useState<string | null>(null);
 
-    const scoredResumes = resumes.filter((resume) => resume.atsScore !== null);
-    const pendingResumes = resumes.filter((resume) => resume.atsScore === null);
+    useEffect(() => {
+        setResumeItems(resumes);
+    }, [resumes]);
+
+    const scoredResumes = resumeItems.filter((resume) => resume.atsScore !== null);
     const avgScore = scoredResumes.length > 0
         ? `${Math.round(scoredResumes.reduce((sum, resume) => sum + (resume.atsScore ?? 0), 0) / scoredResumes.length)}%`
         : "--";
 
-    const filteredResumes = resumes
+    async function handleDeleteResume(resume: ResumeBankItem) {
+        if (deletingResumeId !== null) {
+            return;
+        }
+
+        const confirmed = window.confirm(`Delete ${resume.filePath}? This will also remove linked ATS analyses for this upload.`);
+        if (!confirmed) {
+            return;
+        }
+
+        const supabase = createClient();
+        setDeletingResumeId(resume.id);
+        setDeleteNotice(null);
+
+        try {
+            const { error: analysesDeleteError } = await supabase
+                .from("ats_analyses")
+                .delete()
+                .eq("resume_id", resume.id);
+
+            if (analysesDeleteError) {
+                throw new Error(`Failed to delete linked ATS analyses: ${analysesDeleteError.message}`);
+            }
+
+            const { error: resumeDeleteError } = await supabase
+                .from("resumes")
+                .delete()
+                .eq("id", resume.id);
+
+            if (resumeDeleteError) {
+                throw new Error(`Failed to delete resume: ${resumeDeleteError.message}`);
+            }
+
+            let nextNotice: string | null = null;
+            if (resume.storagePath) {
+                const { error: storageDeleteError } = await supabase.storage
+                    .from(RESUME_PDF_BUCKET)
+                    .remove([resume.storagePath]);
+
+                if (storageDeleteError) {
+                    nextNotice = `Resume deleted from the bank, but the stored PDF could not be deleted: ${storageDeleteError.message}`;
+                }
+            }
+
+            setResumeItems((current) => current.filter((item) => item.id !== resume.id));
+            setSelectedResume((current) => (current?.id === resume.id ? null : current));
+            setDeleteNotice(nextNotice);
+            router.refresh();
+        } catch (error) {
+            setDeleteNotice(error instanceof Error ? error.message : "Failed to delete resume.");
+        } finally {
+            setDeletingResumeId(null);
+        }
+    }
+
+    const filteredResumes = resumeItems
         .filter((resume) => {
             const searchNeedle = search.trim().toLowerCase();
             const matchesSearch = searchNeedle.length === 0
@@ -202,7 +323,7 @@ export default function ResumeBankClient({ userName, initials, email, resumes }:
         <PageLayout currentPage="Resume Bank" title="Resume Bank" subtitle="Browse every uploaded resume and inspect the latest ATS result tied to each one" name={userName} initials={initials} email={email}>
                 <div style={{ display: "flex", gap: 16, marginBottom: 24 }}>
                     {[
-                        { label: "Total Resumes", value: String(resumes.length), icon: "📄" },
+                        { label: "Total Resumes", value: String(resumeItems.length), icon: "📄" },
                         { label: "Scored", value: String(scoredResumes.length), icon: "⚡" },
                         { label: "Avg ATS Score", value: avgScore, icon: "⭐" },
                     ].map(({ label, value, icon }) => (
@@ -215,6 +336,12 @@ export default function ResumeBankClient({ userName, initials, email, resumes }:
                         </div>
                     ))}
                 </div>
+
+                {deleteNotice && (
+                    <div style={{ marginBottom: 18, padding: "14px 16px", borderRadius: 12, border: "1px solid #f0d9b5", background: "#fffaf1", color: "#8a5a14", fontSize: 13.5, lineHeight: 1.5 }}>
+                        {deleteNotice}
+                    </div>
+                )}
 
                 <div style={{ display: "flex", gap: 10, marginBottom: 24, alignItems: "center", flexWrap: "wrap" }}>
                     <div style={{ flex: 1, minWidth: 240, position: "relative" }}>
@@ -248,11 +375,20 @@ export default function ResumeBankClient({ userName, initials, email, resumes }:
 
                 {filteredResumes.length === 0 && (
                     <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, padding: "28px 24px", fontSize: 13.5, color: "#666" }}>
-                        No resumes matched the current filters. Try clearing the search or upload a new resume for analysis.
+                        {resumeItems.length === 0
+                            ? "You have no saved resumes in the bank right now. Upload a new resume to add one."
+                            : "No resumes matched the current filters. Try clearing the search or upload a new resume for analysis."}
                     </div>
                 )}
 
-                {selectedResume && <ResumePreviewModal resume={selectedResume} onClose={() => setSelectedResume(null)} />}
+                {selectedResume && (
+                    <ResumePreviewModal
+                        resume={selectedResume}
+                        onClose={() => setSelectedResume(null)}
+                        onDelete={handleDeleteResume}
+                        isDeleting={deletingResumeId === selectedResume.id}
+                    />
+                )}
         </PageLayout>
     );
 }
