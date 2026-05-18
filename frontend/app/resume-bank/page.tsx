@@ -10,11 +10,20 @@ type ResumeRow = {
     resume_type: string | null;
     created_at: string | null;
 };
+type AtsCategory = { name: string; matched: string[]; missing: string[]; score: number };
+type AtsSuggestion = { priority: "high" | "medium" | "low"; category: string; title: string; detail: string };
 type AtsAnalysisRow = {
     id: string;
     resume_id: number | null;
     ats_score: number | string | null;
+    semantic_score: number | string | null;
+    keyword_match_score: number | string | null;
     job_description: string | null;
+    summary: string | null;
+    categories: AtsCategory[] | null;
+    suggestions: AtsSuggestion[] | null;
+    matching_keywords: string[] | null;
+    missing_keywords: string[] | null;
     created_at: string | null;
 };
 
@@ -63,6 +72,19 @@ function getResumePdfUrl(supabase: Awaited<ReturnType<typeof createClient>>, fil
     return supabase.storage.from(RESUME_PDF_BUCKET).getPublicUrl(storagePath).data.publicUrl;
 }
 
+function extractJobLabel(jobDescription: string | null): string {
+    if (!jobDescription) return "Not yet scored";
+    const cleaned = jobDescription.replace(/\s+/g, " ").trim();
+    if (!cleaned) return "Not yet scored";
+
+    // Try to pull a likely title from the first ~120 chars (first line or first sentence).
+    const firstLine = cleaned.split(/[\n\r.]/)[0].trim();
+    if (firstLine.length > 0 && firstLine.length <= 80) {
+        return firstLine;
+    }
+    return firstLine.slice(0, 60).trimEnd() + "…";
+}
+
 export default async function ResumeBank() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -78,7 +100,13 @@ export default async function ResumeBank() {
     ] = await Promise.all([
         supabase.from("profiles").select("first_name,last_name").eq("id", user.id).maybeSingle<ProfileRow>(),
         supabase.from("resumes").select("id,file_path,file_text,resume_type,created_at").eq("user_id", user.id).eq("resume_type", "uploaded").order("created_at", { ascending: false }).returns<ResumeRow[]>(),
-        supabase.from("ats_analyses").select("id,resume_id,ats_score,job_description,created_at").eq("user_id", user.id).not("resume_id", "is", null).order("created_at", { ascending: false }).returns<AtsAnalysisRow[]>(),
+        supabase
+            .from("ats_analyses")
+            .select("id,resume_id,ats_score,semantic_score,keyword_match_score,job_description,summary,categories,suggestions,matching_keywords,missing_keywords,created_at")
+            .eq("user_id", user.id)
+            .not("resume_id", "is", null)
+            .order("created_at", { ascending: false })
+            .returns<AtsAnalysisRow[]>(),
     ]);
 
     const safeProfile = profile ?? null;
@@ -108,7 +136,15 @@ export default async function ResumeBank() {
             pdfUrl: getResumePdfUrl(supabase, resume.file_path),
             createdAt: resume.created_at,
             atsScore: toNumber(latestAnalysis?.ats_score),
+            semanticScore: toNumber(latestAnalysis?.semantic_score),
+            keywordMatchScore: toNumber(latestAnalysis?.keyword_match_score),
             jobDescription: latestAnalysis?.job_description ?? "",
+            jobLabel: extractJobLabel(latestAnalysis?.job_description ?? null),
+            summary: latestAnalysis?.summary ?? "",
+            categories: latestAnalysis?.categories ?? [],
+            suggestions: latestAnalysis?.suggestions ?? [],
+            matchingKeywords: latestAnalysis?.matching_keywords ?? [],
+            missingKeywords: latestAnalysis?.missing_keywords ?? [],
             analysisCreatedAt: latestAnalysis?.created_at ?? null,
         };
     });

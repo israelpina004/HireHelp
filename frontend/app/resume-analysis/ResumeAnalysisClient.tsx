@@ -143,7 +143,31 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
     const [grading, setGrading] = useState(false);
     const [downloadingPdf, setDownloadingPdf] = useState(false);
 
-    const canRun = file != null && jd.trim().length > 0;
+    const jdLen = jd.trim().length;
+    const MIN_JD_LEN = 50;
+    const fileOk = file != null;
+    const jdOk = jdLen >= MIN_JD_LEN;
+    const canRun = fileOk && jdOk;
+    const disabledReason = !fileOk && !jdOk
+        ? `Upload a PDF and paste a job description (min ${MIN_JD_LEN} chars).`
+        : !fileOk
+            ? "Upload a resume PDF to continue."
+            : !jdOk
+                ? `Paste a job description (min ${MIN_JD_LEN} chars — currently ${jdLen}).`
+                : "";
+
+    const [isDragOver, setIsDragOver] = useState(false);
+
+    function handleFiles(files: FileList | null) {
+        if (!files || files.length === 0) return;
+        const next = files[0];
+        if (next.type !== "application/pdf" && !next.name.toLowerCase().endsWith(".pdf")) {
+            setError("Please upload a PDF file.");
+            return;
+        }
+        setError(null);
+        setFile(next);
+    }
 
     async function handleAnalyze() {
         if (!file) return;
@@ -395,33 +419,77 @@ export default function ResumeAnalysisClient({ userId, userName, initials, email
                         <div style={{ display: "flex", gap: 20 }}>
                             {/* Resume upload */}
                             <div style={{ flex: 1, background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, padding: 24 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}><ResumeAnalysisIcon /><h2 style={{ fontSize: 15, fontWeight: 600, color: "#0a0a0a" }}>Your Resume</h2></div>
-                                <label style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: "2px dashed #e0e0e0", borderRadius: 10, padding: "40px 24px", cursor: "pointer", background: file ? "#fafafa" : "#fff" }}
-                                    onMouseEnter={e => (e.currentTarget.style.borderColor = "#aaa")}
-                                    onMouseLeave={e => (e.currentTarget.style.borderColor = "#e0e0e0")}
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}><ResumeAnalysisIcon /><h2 style={{ fontSize: 15, fontWeight: 600, color: "#0a0a0a" }}>Your Resume <span style={{ color: "#d00", fontWeight: 600 }}>*</span></h2></div>
+                                <label
+                                    onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                                    onDragLeave={() => setIsDragOver(false)}
+                                    onDrop={(e) => {
+                                        e.preventDefault();
+                                        setIsDragOver(false);
+                                        handleFiles(e.dataTransfer.files);
+                                    }}
+                                    style={{
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        border: `2px dashed ${isDragOver ? "#0a0a0a" : "#d0d0d0"}`,
+                                        borderRadius: 10,
+                                        padding: "40px 24px",
+                                        cursor: "pointer",
+                                        background: isDragOver ? "#f5f5f5" : file ? "#fafafa" : "#fff",
+                                        transition: "background 0.15s ease, border-color 0.15s ease",
+                                    }}
                                 >
-                                    <input type="file" accept=".pdf" onChange={e => { if (e.target.files?.[0]) setFile(e.target.files[0]); }} style={{ display: "none" }} />
-                                    <div style={{ color: file ? "#16a34a" : "#ccc", marginBottom: 10 }}><UploadIcon /></div>
+                                    <input type="file" accept=".pdf,application/pdf" onChange={e => handleFiles(e.target.files)} style={{ display: "none" }} />
+                                    <div style={{ color: file ? "#16a34a" : "#999", marginBottom: 10 }}><UploadIcon /></div>
                                     {file ? (
-                                        <><div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}><span style={{ color: "#16a34a" }}><CheckIcon /></span><span style={{ fontSize: 13.5, fontWeight: 600, color: "#0a0a0a" }}>{file.name}</span></div><span style={{ fontSize: 12, color: "#aaa" }}>Click to replace</span></>
+                                        <>
+                                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                                                <span style={{ color: "#16a34a" }}><CheckIcon /></span>
+                                                <span style={{ fontSize: 13.5, fontWeight: 600, color: "#0a0a0a" }}>{file.name}</span>
+                                            </div>
+                                            <span style={{ fontSize: 12, color: "#666" }}>Click or drop a new PDF to replace</span>
+                                        </>
                                     ) : (
-                                        <><span style={{ fontSize: 14, fontWeight: 500, color: "#555", marginBottom: 4 }}>Upload your resume</span><span style={{ fontSize: 12, color: "#aaa" }}>Supported format: PDF</span><button style={{ marginTop: 16, padding: "8px 20px", border: "1px solid #d0d0d0", borderRadius: 7, background: "#fff", fontSize: 13, color: "#555", cursor: "pointer", fontWeight: 500, pointerEvents: "none" }}>Choose File</button></>
+                                        <>
+                                            <span style={{ fontSize: 14, fontWeight: 500, color: "#333", marginBottom: 4 }}>Drag and drop your PDF here</span>
+                                            <span style={{ fontSize: 12, color: "#666" }}>or click to browse — PDF only</span>
+                                            <span style={{ marginTop: 16, padding: "8px 20px", border: "1px solid #d0d0d0", borderRadius: 7, background: "#fff", fontSize: 13, color: "#333", fontWeight: 500 }}>Choose File</span>
+                                        </>
                                     )}
                                 </label>
                             </div>
 
                             {/* Job description */}
                             <div style={{ flex: 1, background: "#fff", border: "1px solid #e8e8e8", borderRadius: 12, padding: 24 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                                     <TrackingIcon />
-                                    <h2 style={{ fontSize: 15, fontWeight: 600, color: "#0a0a0a" }}>Job Description</h2>
+                                    <h2 style={{ fontSize: 15, fontWeight: 600, color: "#0a0a0a" }}>Job Description <span style={{ color: "#d00", fontWeight: 600 }}>*</span></h2>
                                 </div>
-                                <textarea value={jd} onChange={e => setJd(e.target.value)} placeholder="Paste the job description here for an ATS simulation..." style={{ width: "100%", height: 298, padding: 14, border: "1px solid #e8e8e8", borderRadius: 8, fontSize: 12.5, color: "#333", lineHeight: 1.6, fontFamily: "'DM Sans', system-ui, sans-serif", background: "#fafafa" }} />
+                                <div style={{ fontSize: 12, color: jdOk ? "#16a34a" : "#666", marginBottom: 8 }}>
+                                    {jdLen} chars, min {MIN_JD_LEN}
+                                </div>
+                                <textarea
+                                    value={jd}
+                                    onChange={e => setJd(e.target.value)}
+                                    placeholder="Paste the job description here for an ATS simulation..."
+                                    style={{ width: "100%", height: 270, padding: 14, border: `1px solid ${jdLen > 0 && !jdOk ? "#fca5a5" : "#e8e8e8"}`, borderRadius: 8, fontSize: 12.5, color: "#333", lineHeight: 1.6, fontFamily: "'DM Sans', system-ui, sans-serif", background: "#fafafa" }}
+                                />
                             </div>
                         </div>
 
-                        <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
-                            <button onClick={handleAnalyze} disabled={!canRun || running} style={{ padding: "12px 32px", background: canRun ? "#0a0a0a" : "#d0d0d0", color: "#fff", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 600, cursor: canRun ? "pointer" : "not-allowed", display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                            {!canRun && (
+                                <span style={{ fontSize: 12.5, color: "#666" }}>{disabledReason}</span>
+                            )}
+                            <button
+                                onClick={handleAnalyze}
+                                disabled={!canRun || running}
+                                aria-disabled={!canRun || running}
+                                title={!canRun ? disabledReason : ""}
+                                style={{ padding: "12px 32px", background: canRun ? "#0a0a0a" : "#d0d0d0", color: "#fff", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 600, cursor: canRun ? "pointer" : "not-allowed", display: "flex", alignItems: "center", gap: 8 }}
+                            >
                                 {running ? (<><span style={{ width: 14, height: 14, border: "2px solid #ffffff44", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} />Running ATS Simulation...</>) : "Run ATS Simulation →"}
                             </button>
                         </div>
