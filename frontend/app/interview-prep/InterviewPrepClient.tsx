@@ -82,6 +82,8 @@ interface InterviewPrepClientProps {
     email: string;
 }
 
+type Focus = "mixed" | "behavioral" | "technical" | "situational";
+
 export default function InterviewPrepClient({ userId, userName, initials, email }: InterviewPrepClientProps) {
     const [view, setView] = useState<View>("setup");
     const [jobDescription, setJobDescription] = useState("");
@@ -91,6 +93,8 @@ export default function InterviewPrepClient({ userId, userName, initials, email 
     const [jobTitle, setJobTitle] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("All");
     const [completed, setCompleted] = useState<string[]>([]);
+    const [targetCount, setTargetCount] = useState<number>(10);
+    const [focus, setFocus] = useState<Focus>("mixed");
 
     const categories = ["All", ...Array.from(new Set(questions.map(q => q.category)))];
     const filtered = questions.filter(q => selectedCategory === "All" || q.category === selectedCategory);
@@ -101,7 +105,15 @@ export default function InterviewPrepClient({ userId, userName, initials, email 
         setError(null); setLoading(true);
         try {
             const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
-            const res = await fetch(`${apiUrl}/api/interview/generate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ job_description: jobDescription.trim() }) });
+            const res = await fetch(`${apiUrl}/api/interview/generate`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    job_description: jobDescription.trim(),
+                    target_count: targetCount,
+                    focus,
+                }),
+            });
             if (!res.ok) { const body = await res.json().catch(() => ({})); throw new Error(body.error ?? `Server error: ${res.status}`); }
             const data: ApiResponse = await res.json();
             const flat = flattenResponse(data);
@@ -131,14 +143,60 @@ export default function InterviewPrepClient({ userId, userName, initials, email 
                                 <div><h2 style={{ fontSize: 16, fontWeight: 700, color: "#0a0a0a" }}>Paste the Job Description</h2><p style={{ fontSize: 12.5, color: "#aaa", marginTop: 2 }}>The AI will generate behavioral questions tailored to this specific role.</p></div>
                             </div>
                             <div style={{ marginBottom: 20 }}>
-                                <label style={{ fontSize: 12.5, color: "#888", fontWeight: 500, display: "block", marginBottom: 6 }}>
+                                <label style={{ fontSize: 12.5, color: "#444", fontWeight: 500, display: "block", marginBottom: 6 }}>
                                     Job description <span style={{ color: "#d00" }}>*</span>
-                                    <span style={{ marginLeft: 8, color: jobDescription.length >= 50 ? "#16a34a" : "#aaa" }}>({jobDescription.length} chars, min 50)</span>
+                                    <span style={{ marginLeft: 8, color: jobDescription.length >= 50 ? "#16a34a" : "#666" }}>({jobDescription.length} chars, min 50)</span>
                                 </label>
                                 <textarea value={jobDescription} onChange={e => { setJobDescription(e.target.value); setError(null); }} placeholder="Paste the full job description here — the more detail you provide, the more tailored the questions will be..." rows={10} style={{ width: "100%", padding: "12px 14px", border: `1px solid ${error ? "#fca5a5" : "#e8e8e8"}`, borderRadius: 8, fontSize: 13.5, color: "#333", lineHeight: 1.6, fontFamily: "'DM Sans', system-ui, sans-serif", outline: "none", background: "#fafafa" }} />
                             </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
+                                <div>
+                                    <label style={{ fontSize: 12.5, color: "#444", fontWeight: 500, display: "block", marginBottom: 6 }}>
+                                        Number of questions
+                                    </label>
+                                    <div style={{ display: "flex", gap: 6 }}>
+                                        {[5, 10, 20].map((n) => (
+                                            <button
+                                                key={n}
+                                                type="button"
+                                                onClick={() => setTargetCount(n)}
+                                                style={{
+                                                    flex: 1,
+                                                    padding: "9px 8px",
+                                                    border: "1px solid #e8e8e8",
+                                                    borderRadius: 8,
+                                                    background: targetCount === n ? "#0a0a0a" : "#fff",
+                                                    color: targetCount === n ? "#fff" : "#333",
+                                                    fontSize: 13,
+                                                    fontWeight: 600,
+                                                    cursor: "pointer",
+                                                }}
+                                            >
+                                                {n}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: 12.5, color: "#444", fontWeight: 500, display: "block", marginBottom: 6 }}>
+                                        Question style
+                                    </label>
+                                    <select
+                                        value={focus}
+                                        onChange={(e) => setFocus(e.target.value as Focus)}
+                                        style={{ width: "100%", padding: "9px 12px", border: "1px solid #e8e8e8", borderRadius: 8, fontSize: 13.5, color: "#333", background: "#fff", fontFamily: "'DM Sans', system-ui, sans-serif", cursor: "pointer" }}
+                                    >
+                                        <option value="mixed">Mixed (recommended)</option>
+                                        <option value="behavioral">Behavioral only</option>
+                                        <option value="technical">Technical only</option>
+                                        <option value="situational">Situational only</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             {error && (<div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#b91c1c" }}>{error}</div>)}
-                            <button onClick={handleGenerate} disabled={loading || jobDescription.trim().length < 50} style={{ width: "100%", padding: "13px", background: loading || jobDescription.trim().length < 50 ? "#d0d0d0" : "#0a0a0a", color: "#fff", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 600, cursor: loading || jobDescription.trim().length < 50 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "background 0.2s" }}>
+                            <button onClick={handleGenerate} disabled={loading || jobDescription.trim().length < 50} aria-disabled={loading || jobDescription.trim().length < 50} style={{ width: "100%", padding: "13px", background: loading || jobDescription.trim().length < 50 ? "#d0d0d0" : "#0a0a0a", color: "#fff", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 600, cursor: loading || jobDescription.trim().length < 50 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "background 0.2s" }}>
                                 {loading ? (<><span style={{ width: 14, height: 14, border: "2px solid #ffffff44", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} />Generating Questions...</>) : (<><SparkleIcon />Generate Interview Questions</>)}
                             </button>
                         </div>

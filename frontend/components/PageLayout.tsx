@@ -18,11 +18,11 @@ export default function PageLayout({ currentPage, title, subtitle, headerRight, 
     return (
         <div style={{ display: "flex", minHeight: "100vh", background: "#fafafa", fontFamily: "'DM Sans', system-ui, sans-serif" }}>
             <Sidebar currentPage={currentPage} name={name} initials={initials} email={email} />
-            <main style={{ flex: 1, padding: "36px 40px", overflowY: "auto" }}>
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>
+            <main className="hh-main" style={{ flex: 1, padding: "36px 40px", overflowY: "auto" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28, gap: 16, flexWrap: "wrap" }}>
                     <div>
                         <h1 style={{ fontSize: 26, fontWeight: 700, color: "#0a0a0a", letterSpacing: "-0.03em", fontFamily: "'DM Serif Display', Georgia, serif" }}>{title}</h1>
-                        <p style={{ fontSize: 14, color: "#888", marginTop: 5 }}>{subtitle}</p>
+                        <p style={{ fontSize: 14, color: "#555", marginTop: 5 }}>{subtitle}</p>
                     </div>
                     {headerRight}
                 </div>

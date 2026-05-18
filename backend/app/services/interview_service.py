@@ -47,22 +47,45 @@ STAR_GUIDANCE = {
 }
 
 
-def generate_interview_questions(job_description: str) -> dict:
+def generate_interview_questions(
+    job_description: str,
+    target_count: int | None = None,
+    focus: str | None = None,
+) -> dict:
     """
-    Uses Gemini to analyze a job description and generate behavioral interview
+    Uses Gemini to analyze a job description and generate tailored interview
     questions organized by competency area.
+
+    target_count: optional total number of questions to target across competencies.
+    focus: 'mixed' (default), 'behavioral', 'technical', or 'situational'.
     """
     client = get_gemini_model()
 
     competency_list = ", ".join(COMPETENCY_AREAS)
 
+    if target_count and target_count > 0:
+        count_instruction = (
+            f"Aim for roughly {target_count} questions total, distributed across the relevant competencies."
+        )
+    else:
+        count_instruction = "For each competency, generate 2-4 questions that are specifically relevant to the job description."
+
+    focus_instruction = {
+        "behavioral": "Focus on behavioral 'Tell me about a time...' style questions.",
+        "technical": "Focus on technical questions that probe skill depth, system design, and hands-on experience relevant to the role.",
+        "situational": "Focus on situational/hypothetical 'How would you handle...' questions.",
+        "mixed": "Use a mix of behavioral, situational, and technical questions as appropriate to the role.",
+    }.get(focus or "mixed", "Use a mix of behavioral, situational, and technical questions as appropriate to the role.")
+
     prompt = f"""
 You are an expert career coach and interview preparation specialist.
 
-Analyze the job description below and generate a set of tailored behavioral interview questions.
+Analyze the job description below and generate a set of tailored interview questions.
 Organize questions into the following competency areas: {competency_list}.
 
-For each competency, generate 2-4 questions that are specifically relevant to the job description.
+{count_instruction}
+{focus_instruction}
+
 Assign a difficulty to each question: "easy", "medium", or "hard".
 
 Return ONLY valid JSON. Do not include markdown formatting or code fences.
@@ -77,7 +100,7 @@ Required JSON Structure:
       "questions": [
         {{
           "id": "string (unique, e.g. 'leadership_1')",
-          "question": "string (full behavioral question starting with 'Tell me about a time...' or similar)",
+          "question": "string (full question — start behavioral ones with 'Tell me about a time...' etc.)",
           "why_asked": "string (1 sentence: what the interviewer is looking for)",
           "difficulty": "easy | medium | hard"
         }}

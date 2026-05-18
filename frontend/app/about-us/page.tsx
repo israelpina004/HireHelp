@@ -36,23 +36,23 @@ export default async function AboutUsPage() {
         >
             <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.5fr) minmax(280px, 0.9fr)", gap: 20, marginBottom: 20 }}>
                 <section style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 14, padding: 28 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#999", marginBottom: 12 }}>Our Mission</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#666", marginBottom: 12 }}>Our Mission</div>
                     <h2 style={{ fontSize: 28, fontWeight: 700, color: "#0a0a0a", letterSpacing: "-0.03em", lineHeight: 1.15, fontFamily: "'DM Serif Display', Georgia, serif", marginBottom: 14 }}>
-                        Streamline interview prep with one all-in-one platform.
+                        Run your entire job search from one place.
                     </h2>
-                    <p style={{ fontSize: 14.5, color: "#555", lineHeight: 1.8, maxWidth: 720 }}>
-                        HireHelp is designed to make the job search process more focused and less fragmented. Instead of juggling separate tools,
-                        users can prepare, improve, and stay organized in one place.
+                    <p style={{ fontSize: 14.5, color: "#444", lineHeight: 1.8, maxWidth: 720 }}>
+                        HireHelp pulls resume optimization, interview prep, and application tracking into a single workspace,
+                        so you can spend less time juggling tools and more time landing the role.
                     </p>
                 </section>
 
                 <aside style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 14, padding: 28, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 18 }}>
                     <div>
-                        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#999", marginBottom: 12 }}>Contact</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#666", marginBottom: 12 }}>Contact</div>
                         <div style={{ fontSize: 22, fontWeight: 700, color: "#0a0a0a", letterSpacing: "-0.03em", fontFamily: "'DM Serif Display', Georgia, serif", marginBottom: 8 }}>
                             thehirehelpteam@gmail.com
                         </div>
-                        <p style={{ fontSize: 14, color: "#666", lineHeight: 1.7 }}>
+                        <p style={{ fontSize: 14, color: "#444", lineHeight: 1.7 }}>
                             Reach out for support, feedback, or product questions.
                         </p>
                     </div>
@@ -66,7 +66,7 @@ export default async function AboutUsPage() {
             </div>
 
             <section style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 14, padding: 28 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#999", marginBottom: 18 }}>What HireHelp Covers</div>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#666", marginBottom: 18 }}>What HireHelp Covers</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 16 }}>
                     {[
                         {
@@ -84,7 +84,7 @@ export default async function AboutUsPage() {
                     ].map((item) => (
                         <div key={item.title} style={{ background: "#fcfcfc", border: "1px solid #efefef", borderRadius: 12, padding: 20 }}>
                             <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0a0a0a", marginBottom: 10 }}>{item.title}</h3>
-                            <p style={{ fontSize: 13.5, color: "#666", lineHeight: 1.75 }}>{item.body}</p>
+                            <p style={{ fontSize: 13.5, color: "#444", lineHeight: 1.75 }}>{item.body}</p>
                         </div>
                     ))}
                 </div>

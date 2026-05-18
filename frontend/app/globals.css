@@ -16,6 +16,21 @@ input, select {
   outline: none;
 }
 
+/* Accessible keyboard focus ring — only shows on keyboard navigation, not mouse clicks */
+:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Sidebar nav link hover — non-active items get a subtle background */
+.hh-nav-link[data-active="false"]:hover {
+  background: #f3f3f3 !important;
+  color: #0a0a0a !important;
+}
+
+/* Cursor pointer on disabled buttons should be not-allowed (already handled inline) */
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
@@ -28,4 +43,11 @@ input, select {
 @keyframes modalIn {
   from { opacity: 0; transform: scale(0.97) translateY(8px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Responsive — collapse sidebar on narrow viewports so the app is at least usable on phones */
+@media (max-width: 720px) {
+  .hh-main {
+    padding: 20px 16px !important;
+  }
 }
